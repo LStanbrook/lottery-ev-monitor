@@ -1,0 +1,22 @@
+[alerts]
+# Alert when a game returns at least this much per £1 staked (1.0 = break-even).
+# Typical: Thunderball 0.53, Set For Life 0.50, normal Lotto ~0.40, EuroMillions/Powerball
+# 0.4-0.5 depending on jackpot, Lotto Must Be Won draw ~0.65-0.75.
+threshold = 0.60
+# Per-game overrides, e.g. powerball = 0.8
+[alerts.per_game]
+
+[notify]
+windows_toast = true
+# Phone push via https://ntfy.sh: install the ntfy app, subscribe to a hard-to-guess topic
+# name, and put the same name here. Leave blank to disable.
+ntfy_topic = ""
+
+[assumptions]
+discount_rate = 0.045              # for valuing 30-year annuity jackpots today
+powerball_annual_increase = 0.05   # UK Powerball annuity payments rise 5% a year
+sales_growth = 1.10                # next draw sells this multiple of the last draw's tickets
+lotto_must_be_won = "auto"         # "auto" detects 5 rollovers; "yes"/"no" to force
+lotto_mbw_sales_boost = 1.5        # Must Be Won draws sell more tickets
+millionaire_maker_winners = 1      # UK EuroMillions Millionaire Maker winners per draw
+millionaire_maker_prize = 1000000

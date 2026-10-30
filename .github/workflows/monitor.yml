@@ -1,0 +1,47 @@
+name: Lottery EV check
+
+on:
+  schedule:
+    # 08:00 and 16:00 UTC: picks up new jackpots before every evening draw (Lotto Wed/Sat,
+    # EuroMillions Tue/Fri) and the early-morning Powerball draws. GitHub may delay
+    # scheduled runs by up to ~an hour under load.
+    - cron: "0 8 * * *"
+    - cron: "0 16 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # commit history and alert state back to the repo
+
+concurrency:
+  group: lottery-ev
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -t .
+
+      - name: Calculate EV and send alerts
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python monitor.py --notify
+
+      - name: Commit history
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "EV snapshot $(date -u +%Y-%m-%dT%H:%M)"
+            git push
+          fi
