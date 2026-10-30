@@ -136,7 +136,7 @@ def main() -> int:
     for r in results:
         if r.game.key in stale:
             r.stale_since = stale[r.game.key]
-            r.notes.append(f"site unreachable, using data from {stale[r.game.key]}")
+            r.notes.append(f"no live jackpot, using data from {stale[r.game.key]}")
     print_table(results)
     if not args.jackpot:
         append_history(results)

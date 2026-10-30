@@ -129,7 +129,8 @@ def _euromillions() -> GameData:
 
 def _powerball() -> GameData:
     results = fetch("/powerball/results")
-    data = GameData(jackpot=money_after(results, "Next Powerball Jackpot"))
+    data = GameData(jackpot=money_after(results, "Next Powerball Jackpot")
+                    or money_after(fetch("/"), "Est. Powerball Jackpot"))
     return _with_breakdown("powerball", data, results)
 
 
