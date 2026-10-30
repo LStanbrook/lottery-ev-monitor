@@ -1,0 +1,353 @@
+"""Builds a self-contained HTML dashboard from the latest results and data/history.csv."""
+import csv
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+from .ev import Result
+
+TRACKED = ("lotto", "euromillions", "powerball")  # games whose value moves with the jackpot
+
+
+def _history(path: Path) -> dict[str, list]:
+    series = {k: [] for k in TRACKED}
+    if not path.exists():
+        return series
+    with open(path, newline="") as f:
+        for row in csv.DictReader(f):
+            if row["game"] in series and row["jackpot"]:  # skip runs where scraping failed
+                series[row["game"]].append([row["timestamp"], float(row["ratio"]), float(row["jackpot"])])
+    return series
+
+
+def build(results: list[Result], history_path: Path, threshold: float, out_path: Path) -> None:
+    lotto = next(r for r in results if r.game.key == "lotto")
+    data = {
+        "generated": datetime.now(timezone.utc).isoformat(timespec="minutes"),
+        "threshold": threshold,
+        "rollovers": lotto.rollovers,
+        "mustBeWon": lotto.must_be_won,
+        "games": [
+            {
+                "key": r.game.key, "name": r.game.name, "price": r.game.price,
+                "jackpot": r.jackpot, "worth": r.jackpot_value, "ev": r.ev, "ratio": r.ratio,
+                "share": r.share_chance, "fixed": not r.game.has_jackpot_feed,
+                "notes": ", ".join(r.notes),
+            }
+            for r in sorted(results, key=lambda r: r.ratio, reverse=True)
+        ],
+        "history": _history(history_path),
+    }
+    payload = json.dumps(data).replace("</", "<\\/")
+    out_path.parent.mkdir(exist_ok=True)
+    out_path.write_text(TEMPLATE.replace("__DATA__", payload), encoding="utf-8")
+
+
+TEMPLATE = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lottery Value Monitor</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f4f2; --surface-1: #fcfcfb; --border: #e4e3df; --grid: #ecebe7;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
+  --accent: #2a78d6; --good: #0f7b3e; --good-bg: #e3f4ea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+    --accent: #3987e5; --good: #5fd08f; --good-bg: #16301f;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+  --accent: #3987e5; --good: #5fd08f; --good-bg: #16301f;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 960px; margin: 0 auto; padding: 32px 16px 48px; }
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 24px; }
+h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 4px; }
+.sub { color: var(--text-secondary); font-size: 13px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .value { font-size: 32px; font-weight: 650; letter-spacing: -0.02em; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.tile .note { color: var(--text-muted); font-size: 13px; }
+.pips { display: flex; gap: 6px; margin: 10px 0 6px; }
+.pip { flex: 1; height: 8px; border-radius: 4px; background: var(--grid); }
+.pip.on { background: var(--accent); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  background: var(--good-bg); color: var(--good); }
+.chart { position: relative; margin-top: 12px; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart .muted { fill: var(--text-muted); }
+.chart .strong { fill: var(--text-primary); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-secondary); margin-top: 8px; }
+.legend span::before { content: ""; display: inline-block; width: 14px; height: 2px; margin-right: 6px; vertical-align: middle; background: var(--c); }
+.tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
+  opacity: 0; transition: opacity .1s; white-space: nowrap; z-index: 2; }
+.tip .row { display: flex; align-items: center; gap: 8px; }
+.tip .row i { width: 12px; height: 2px; background: var(--c); }
+.tip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.tip .t { color: var(--text-muted); margin-bottom: 4px; }
+.empty { color: var(--text-muted); font-size: 13px; padding: 24px 0; text-align: center; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child, th:last-child, td:last-child { text-align: left; }
+th { color: var(--text-secondary); font-weight: 600; }
+td:last-child { color: var(--text-muted); white-space: normal; min-width: 140px; }
+footer { color: var(--text-muted); font-size: 12px; margin-top: 16px; }
+footer p { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Lottery value monitor</h1>
+    <div class="sub" id="updated"></div>
+  </header>
+
+  <section class="tiles">
+    <div class="card tile" id="tile-best"></div>
+    <div class="card tile" id="tile-lotto"></div>
+    <div class="card tile" id="tile-alert"></div>
+  </section>
+
+  <section class="card">
+    <h2>Return per £1 staked, right now</h2>
+    <div class="sub">Expected prize money back for each £1 spent. £1 would be break-even.</div>
+    <div class="chart" id="bars"></div>
+  </section>
+
+  <section class="card">
+    <h2>Return per £1 over time</h2>
+    <div class="sub">The three games whose value moves with the jackpot. Checked twice a day.</div>
+    <div class="legend" id="legend"></div>
+    <div class="chart" id="lines"></div>
+  </section>
+
+  <section class="card">
+    <h2>All games</h2>
+    <div class="table-wrap"><table id="table"></table></div>
+  </section>
+
+  <footer>
+    <p>"Worth today" values annuity jackpots (Powerball, Set For Life) at present value. Jackpot sharing is estimated from the last draw's ticket sales.</p>
+    <p>A Lotto Must Be Won draw comes after 5 rollovers. Then the whole jackpot is paid out to players, which is when Lotto is at its best value.</p>
+  </footer>
+</main>
+
+<script>
+const DATA = __DATA__;
+const SERIES = { lotto: "--series-1", euromillions: "--series-2", powerball: "--series-3" };
+const NAMES = Object.fromEntries(DATA.games.map(g => [g.key, g.name]));
+const NS = "http://www.w3.org/2000/svg";
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pence = r => r >= 1 ? "£" + r.toFixed(2) : Math.round(r * 100) + "p";
+const money = x => x == null ? "–" : x >= 1e6 ? "£" + (x / 1e6).toFixed(1).replace(/\.0$/, "") + "m"
+  : "£" + x.toLocaleString("en-GB", { maximumFractionDigits: x < 1000 ? 2 : 0, minimumFractionDigits: x < 1000 ? 2 : 0 });
+const fmtTime = s => new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+function el(tag, attrs = {}, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function text(parent, x, y, str, attrs = {}) {
+  const t = el("text", { x, y, ...attrs }, parent);
+  t.textContent = str;
+  return t;
+}
+function div(cls, str, parent) {
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  if (str != null) d.textContent = str;
+  if (parent) parent.appendChild(d);
+  return d;
+}
+
+function tiles() {
+  document.getElementById("updated").textContent = "Updated " + fmtTime(DATA.generated);
+  const best = DATA.games[0];
+  const t1 = document.getElementById("tile-best");
+  div("label", "Best value right now", t1);
+  div("value", pence(best.ratio) + " per £1", t1);
+  div("note", best.name + " · " + money(best.ev) + " back per " + money(best.price) + " line", t1);
+
+  const t2 = document.getElementById("tile-lotto");
+  div("label", "Lotto rollovers", t2);
+  const n = DATA.rollovers ?? 0;
+  div("value", DATA.mustBeWon ? "Must Be Won" : n + " of 5", t2);
+  const pips = div("pips", null, t2);
+  for (let i = 0; i < 5; i++) div("pip" + (i < n ? " on" : ""), null, pips);
+  div("note", DATA.mustBeWon ? "Next draw pays out the whole jackpot" :
+    (5 - n) + " more rollover" + (5 - n === 1 ? "" : "s") + " until a Must Be Won draw", t2);
+
+  const t3 = document.getElementById("tile-alert");
+  const over = DATA.games.filter(g => g.ratio >= DATA.threshold);
+  div("label", "Alert threshold", t3);
+  div("value", pence(DATA.threshold) + " per £1", t3);
+  const note = div("note", null, t3);
+  if (over.length) {
+    const b = document.createElement("span"); b.className = "badge";
+    b.textContent = over.map(g => g.name).join(", ") + " above";
+    note.appendChild(b);
+  } else note.textContent = "No game is above it. You'll get a phone alert when one is.";
+}
+
+function bars() {
+  const box = document.getElementById("bars");
+  box.replaceChildren();
+  const W = box.clientWidth, rowH = 36, labelW = W < 480 ? 96 : 120, right = 56, top = 22;
+  const H = top + DATA.games.length * rowH + 4;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img",
+    "aria-label": "Return per £1 staked for each game" }, box);
+  const x = v => labelW + v * (W - labelW - right);
+  // break-even and threshold references
+  const narrow = W < 480;
+  const refs = [[DATA.threshold, narrow ? "Alert" : "Alert " + pence(DATA.threshold)], [1, narrow ? "£1" : "Break-even £1"]];
+  for (const [v, lbl] of refs) {
+    el("line", { x1: x(v), x2: x(v), y1: top - 4, y2: H, stroke: css("--border"), "stroke-width": 1 }, svg);
+    text(svg, x(v), 12, lbl, { "text-anchor": v === 1 ? "end" : "middle", class: "muted" });
+  }
+  const tip = div("tip", null, box);
+  DATA.games.forEach((g, i) => {
+    const y = top + i * rowH, bh = 16, by = y + (rowH - bh) / 2;
+    text(svg, 0, by + 12, g.name, { class: "strong" });
+    const w = Math.max(2, x(g.ratio) - labelW);
+    el("path", { d: `M${labelW},${by} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z`,
+      fill: css("--series-1") }, svg);
+    text(svg, labelW + w + 6, by + 12, pence(g.ratio), { class: "strong" });
+    const hit = el("rect", { x: 0, y, width: W, height: rowH, fill: "transparent", tabindex: 0 }, svg);
+    const show = () => {
+      tip.replaceChildren();
+      div("t", g.name, tip);
+      const r = div("row", null, tip); const b = document.createElement("b");
+      b.textContent = pence(g.ratio) + " per £1"; r.appendChild(b);
+      div(null, money(g.ev) + " expected back per " + money(g.price) + " line", tip);
+      if (g.jackpot) div(null, "Jackpot " + money(g.jackpot) + (g.worth !== g.jackpot ? " (worth " + money(g.worth) + " today)" : ""), tip);
+      tip.style.left = Math.min(x(g.ratio) + 12, W - tip.offsetWidth) + "px";
+      tip.style.top = (y + 12 - tip.offsetHeight / 2 + 16) + "px";
+      tip.style.opacity = 1;
+    };
+    hit.addEventListener("pointerenter", show); hit.addEventListener("focus", show);
+    hit.addEventListener("pointerleave", () => tip.style.opacity = 0);
+    hit.addEventListener("blur", () => tip.style.opacity = 0);
+  });
+}
+
+function lines() {
+  const box = document.getElementById("lines");
+  box.replaceChildren();
+  const legend = document.getElementById("legend");
+  legend.replaceChildren();
+  const keys = Object.keys(SERIES).filter(k => DATA.history[k]?.length);
+  for (const k of keys) {
+    const s = document.createElement("span");
+    s.style.setProperty("--c", css(SERIES[k])); s.textContent = NAMES[k];
+    legend.appendChild(s);
+  }
+  const pts = keys.flatMap(k => DATA.history[k].map(p => new Date(p[0]).getTime()));
+  const times = [...new Set(pts)].sort((a, b) => a - b);
+  if (times.length < 2) {
+    div("empty", "Not enough history yet. The chart fills in as the twice-daily checks run.", box);
+    return;
+  }
+  const W = box.clientWidth, H = 240, narrow = W < 480, m = { l: 40, r: narrow ? 44 : 120, t: 12, b: 28 };
+  const shortSpan = times.at(-1) - times[0] < 2 * 86400e3;
+  const tickFmt = t => new Date(t).toLocaleString("en-GB", shortSpan
+    ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short" });
+  const all = keys.flatMap(k => DATA.history[k].map(p => p[1]));
+  const yMax = Math.min(1.2, Math.max(DATA.threshold + 0.1, ...all.map(v => v + 0.05)));
+  const x = t => m.l + (t - times[0]) / (times.at(-1) - times[0]) * (W - m.l - m.r);
+  const y = v => m.t + (1 - v / yMax) * (H - m.t - m.b);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img",
+    "aria-label": "Return per £1 over time for Lotto, EuroMillions and Powerball" }, box);
+  for (let v = 0; v <= yMax + 1e-9; v += 0.2) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: css("--grid") }, svg);
+    text(svg, m.l - 8, y(v) + 4, Math.round(v * 100) + "p", { "text-anchor": "end", class: "muted" });
+  }
+  el("line", { x1: m.l, x2: W - m.r, y1: y(DATA.threshold), y2: y(DATA.threshold), stroke: css("--text-muted"), "stroke-width": 1 }, svg);
+  text(svg, m.l + 4, y(DATA.threshold) - 6, "Alert " + pence(DATA.threshold), { class: "muted" });
+  const ticks = Math.min(narrow ? 3 : 5, times.length);
+  for (let i = 0; i < ticks; i++) {
+    const t = times[0] + (times.at(-1) - times[0]) * i / (ticks - 1);
+    text(svg, x(t), H - 8, tickFmt(t),
+      { "text-anchor": i === 0 ? "start" : i === ticks - 1 ? "end" : "middle", class: "muted" });
+  }
+  // endpoint labels, nudged apart so they never collide
+  const ends = keys.map(k => ({ k, v: DATA.history[k].at(-1)[1] })).sort((a, b) => y(a.v) - y(b.v));
+  let lastY = -Infinity;
+  for (const e of ends) { e.ly = Math.max(y(e.v) + 4, lastY + 14); lastY = e.ly; }
+  for (const k of keys) {
+    const h = DATA.history[k], c = css(SERIES[k]);
+    el("path", { d: h.map((p, i) => (i ? "L" : "M") + x(new Date(p[0]).getTime()) + "," + y(p[1])).join(""),
+      fill: "none", stroke: c, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    const last = h.at(-1), e = ends.find(e => e.k === k);
+    el("circle", { cx: x(new Date(last[0]).getTime()), cy: y(last[1]), r: 4, fill: c, stroke: css("--surface-1"), "stroke-width": 2 }, svg);
+    // On phones there's only room for the value; the legend and tooltip carry the name.
+    text(svg, W - m.r + 8, e.ly, (narrow ? "" : NAMES[k] + " ") + pence(last[1]), { class: "strong" });
+  }
+  // crosshair + tooltip
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--text-muted"), "stroke-width": 1, opacity: 0 }, svg);
+  const tip = div("tip", null, box);
+  const hit = el("rect", { x: m.l, y: 0, width: W - m.l - m.r, height: H, fill: "transparent" }, svg);
+  hit.addEventListener("pointermove", ev => {
+    const px = ev.clientX - svg.getBoundingClientRect().left;
+    const t = times.reduce((a, b) => Math.abs(x(b) - px) < Math.abs(x(a) - px) ? b : a);
+    cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("opacity", 1);
+    tip.replaceChildren();
+    div("t", fmtTime(t), tip);
+    for (const k of keys) {
+      const p = DATA.history[k].find(p => new Date(p[0]).getTime() === t);
+      if (!p) continue;
+      const r = div("row", null, tip); r.style.setProperty("--c", css(SERIES[k]));
+      r.appendChild(document.createElement("i"));
+      const b = document.createElement("b"); b.textContent = pence(p[1]); r.appendChild(b);
+      r.appendChild(document.createTextNode(" " + NAMES[k] + " · jackpot " + money(p[2])));
+    }
+    tip.style.left = Math.max(0, Math.min(x(t) + 12, W - tip.offsetWidth)) + "px";
+    tip.style.top = m.t + "px"; tip.style.opacity = 1;
+  });
+  hit.addEventListener("pointerleave", () => { tip.style.opacity = 0; cross.setAttribute("opacity", 0); });
+}
+
+function table() {
+  const t = document.getElementById("table");
+  const head = ["Game", "Price", "Jackpot", "Worth today", "EV per line", "Per £1", "Shared if won", "Notes"];
+  const tr = t.createTHead().insertRow();
+  for (const h of head) { const th = document.createElement("th"); th.textContent = h; tr.appendChild(th); }
+  const body = t.createTBody();
+  for (const g of DATA.games) {
+    const r = body.insertRow();
+    for (const v of [g.name, money(g.price), money(g.jackpot), money(g.worth), money(g.ev), pence(g.ratio),
+                     g.share == null ? "–" : Math.round(g.share * 100) + "%", g.notes])
+      r.insertCell().textContent = v;
+  }
+}
+
+tiles(); bars(); lines(); table();
+let raf;
+addEventListener("resize", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { bars(); lines(); }); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { bars(); lines(); });
+</script>
+</body>
+</html>
+"""
