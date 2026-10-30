@@ -159,7 +159,13 @@ def scrape_all() -> dict[str, GameData]:
             print(f"Warning: could not fetch {key} ({e})", file=sys.stderr)
             continue
         if out[key].jackpot is None:
-            print(f"Warning: no {key} jackpot found on lottery.co.uk", file=sys.stderr)
+            # Some visitors (e.g. some GitHub runner regions) get pages without the jackpot block.
+            home = fetch("/")
+            title = re.search(r"<title>(.*?)</title>", home, flags=re.S)
+            print(f"Warning: no {key} jackpot found on lottery.co.uk (homepage {len(home):,} chars, "
+                  f"title {title.group(1).strip() if title else '?'!r}, "
+                  f"'bigJackpot' x{home.count('bigJackpot')}, 'mainJackpot' x{home.count('mainJackpot')})",
+                  file=sys.stderr)
         if not out[key].breakdown:
             print(f"Warning: no {key} prize breakdown found", file=sys.stderr)
     return out
