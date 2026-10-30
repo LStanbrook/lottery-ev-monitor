@@ -29,7 +29,8 @@ Settings live in `config.toml`: the alert threshold, Windows toast and phone (nt
 GitHub Actions ([.github/workflows/monitor.yml](.github/workflows/monitor.yml)) runs the check at 08:00 and 16:00 UTC every day. Each run:
 
 - sends phone alerts through [ntfy](https://ntfy.sh), using the topic stored in the `NTFY_TOPIC` repo secret
-- commits `data/history.csv` and `data/state.json` back to the repo
+- commits `data/history.csv`, `data/state.json` and `data/dashboard.html` back to the repo
+- publishes the dashboard to https://lstanbrook.github.io/lottery-ev-monitor/
 
 To run it now, use the Actions tab → "Lottery EV check" → Run workflow, or `gh workflow run monitor.yml`.
 

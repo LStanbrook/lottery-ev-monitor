@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: write   # commit history and alert state back to the repo
+  pages: write      # publish the dashboard to GitHub Pages
+  id-token: write   # required by actions/deploy-pages
 
 concurrency:
   group: lottery-ev
@@ -45,3 +47,22 @@ jobs:
             git commit -m "EV snapshot $(date -u +%Y-%m-%dT%H:%M)"
             git push
           fi
+
+      - name: Stage the Pages site
+        run: |
+          mkdir -p _site
+          cp data/dashboard.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
