@@ -193,7 +193,7 @@ function tiles() {
   if (stale.length) {
     const box = document.getElementById("stale");
     box.hidden = false;
-    box.textContent = "This check couldn't reach lottery.co.uk, so " + stale.map(([n]) => n).join(", ")
+    box.textContent = "This check couldn't get a live jackpot from lottery.co.uk, so " + stale.map(([n]) => n).join(", ")
       + " use the last good data, from " + fmtTime(stale[0][1]) + ".";
   }
   const best = DATA.games[0];

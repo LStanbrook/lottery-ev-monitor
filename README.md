@@ -19,10 +19,11 @@ Settings live in `config.toml`: the alert threshold, Windows toast and phone (nt
 | EuroMillions (£2.50) | lottery.co.uk estimate | prizes from the last draw, or long-run averages | Includes UK Millionaire Maker (£1m ÷ UK tickets) |
 | Powerball (£4) | lottery.co.uk estimate | prizes from the last draw | The jackpot is a 30-year annuity rising 5% a year, valued at present value (about 48% of the advertised figure) |
 | Thunderball (£1), Set For Life (£1.50) | fixed | fixed | EV never changes, shown for comparison |
+| Lotto HotPicks (£1), EuroMillions HotPicks (£1.50) | fixed | – | Only the best pick count is shown (Pick 1 for both: 61p and 67p per £1). Fixed prizes, so no alerts |
 
 **Jackpot sharing:** ticket sales are estimated from the last draw's winner counts (winners in a busy tier ÷ that tier's odds). Other jackpot winners are then treated as Poisson-distributed.
 
-**Not modelled:** Lotto Millionaire Raffle special draws, EuroMillions Must Be Won draws at the €250m cap, HotPicks, and scratchcards / instant win games. Instant win games have a fixed return to player, so there's nothing to monitor.
+**Not modelled:** Lotto Millionaire Raffle special draws, EuroMillions Must Be Won draws at the €250m cap, and scratchcards / instant win games. Instant win games have a fixed return to player, so there's nothing to monitor.
 
 ## Scheduling
 
