@@ -125,4 +125,27 @@ SET_FOR_LIFE = Game(
     ),
 )
 
-GAMES = {g.key: g for g in (LOTTO, EUROMILLIONS, POWERBALL, THUNDERBALL, SET_FOR_LIFE)}
+# --- HotPicks: choose 1-5 numbers, win a fixed prize only if all of them are drawn.
+# Lotto HotPicks plays both Lotto rounds (each pick must come up in the same round).
+def _hotpicks(key, name, price, drawn, pool, rounds, prizes):
+    return [
+        Game(key=f"{key}_{n}", name=f"{name} (Pick {n})", price=price, rounds=rounds,
+             has_jackpot_feed=False, jackpot_label=f"Pick {n}",
+             jackpot_prob=comb(drawn, n) / comb(pool, n), fixed_jackpot=prize, tiers=())
+        for n, prize in enumerate(prizes, start=1)
+    ]
+
+
+LOTTO_HOTPICKS = _hotpicks("lotto_hotpicks", "Lotto HotPicks", 1.00, 6, 59, 2,
+                           (3, 30, 400, 6_500, 175_000))
+EUROMILLIONS_HOTPICKS = _hotpicks("euromillions_hotpicks", "EuroMillions HotPicks", 1.50, 5, 50, 1,
+                                  (10, 100, 1_500, 30_000, 1_000_000))
+
+
+def _best(picks: list[Game]) -> Game:
+    """The pick count with the best return. Prizes are fixed, so this never changes."""
+    return max(picks, key=lambda g: g.fixed_jackpot * g.jackpot_prob * g.rounds / g.price)
+
+
+GAMES = {g.key: g for g in (LOTTO, EUROMILLIONS, POWERBALL, THUNDERBALL, SET_FOR_LIFE,
+                            _best(LOTTO_HOTPICKS), _best(EUROMILLIONS_HOTPICKS))}

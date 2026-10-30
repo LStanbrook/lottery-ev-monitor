@@ -2,7 +2,8 @@
 import unittest
 
 from lottery_ev.ev import annuity_pv_factor, lotto_rollovers
-from lottery_ev.games import EUROMILLIONS, LOTTO, POWERBALL, SET_FOR_LIFE, THUNDERBALL
+from lottery_ev.games import (EUROMILLIONS, EUROMILLIONS_HOTPICKS, LOTTO, LOTTO_HOTPICKS, POWERBALL,
+                              SET_FOR_LIFE, THUNDERBALL, _best)
 
 
 def one_in(p: float) -> float:
@@ -31,6 +32,19 @@ class TestOdds(unittest.TestCase):
         self.assertAlmostEqual(one_in(EUROMILLIONS.jackpot_prob), 139_838_160, delta=1)
         self.assertAlmostEqual(one_in(THUNDERBALL.jackpot_prob), 8_060_598, delta=1)
         self.assertAlmostEqual(one_in(SET_FOR_LIFE.jackpot_prob), 15_339_390, delta=1)
+
+
+class TestHotPicks(unittest.TestCase):
+    def test_returns(self):
+        # Pick 1: £10 at 1 in 10 for £1.50; Lotto £3 at 6/59 per round, two rounds, for £1.
+        ev = lambda g: g.fixed_jackpot * g.jackpot_prob * g.rounds / g.price
+        self.assertAlmostEqual(ev(EUROMILLIONS_HOTPICKS[0]), 10 * 0.1 / 1.5)
+        self.assertAlmostEqual(ev(LOTTO_HOTPICKS[0]), 3 * 6 / 59 * 2)
+        self.assertAlmostEqual(1 / EUROMILLIONS_HOTPICKS[4].jackpot_prob, 2_118_760)
+
+    def test_best_pick_is_one(self):
+        self.assertEqual(_best(LOTTO_HOTPICKS).key, "lotto_hotpicks_1")
+        self.assertEqual(_best(EUROMILLIONS_HOTPICKS).key, "euromillions_hotpicks_1")
 
 
 class TestHelpers(unittest.TestCase):

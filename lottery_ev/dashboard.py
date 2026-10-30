@@ -30,9 +30,10 @@ def build(results: list[Result], history_path: Path, threshold: float, out_path:
         "games": [
             {
                 "key": r.game.key, "name": r.game.name, "price": r.game.price,
+                "short": r.game.name.replace("EuroMillions HotPicks", "EM HotPicks"),
                 "jackpot": r.jackpot, "worth": r.jackpot_value, "ev": r.ev, "ratio": r.ratio,
-                "share": r.share_chance, "fixed": not r.game.has_jackpot_feed,
-                "notes": ", ".join(r.notes),
+                "ratioHeadline": r.ratio_headline, "share": r.share_chance,
+                "fixed": not r.game.has_jackpot_feed,
             }
             for r in sorted(results, key=lambda r: r.ratio, reverse=True)
         ],
@@ -109,9 +110,8 @@ h2 { font-size: 15px; margin: 0 0 4px; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
-th:first-child, td:first-child, th:last-child, td:last-child { text-align: left; }
-th { color: var(--text-secondary); font-weight: 600; }
-td:last-child { color: var(--text-muted); white-space: normal; min-width: 140px; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--text-secondary); font-weight: 600; white-space: normal; vertical-align: bottom; }
 footer { color: var(--text-muted); font-size: 12px; margin-top: 16px; }
 footer p { margin: 4px 0; }
 </style>
@@ -149,6 +149,7 @@ footer p { margin: 4px 0; }
 
   <footer>
     <p>"Worth today" values annuity jackpots (Powerball, Set For Life) at present value. Jackpot sharing is estimated from the last draw's ticket sales.</p>
+    <p>HotPicks rows show the best option (how many numbers to pick). Choosing more numbers pays bigger prizes but returns less per £1.</p>
     <p>A Lotto Must Be Won draw comes after 5 rollovers. Then the whole jackpot is paid out to players, which is when Lotto is at its best value.</p>
   </footer>
 </main>
@@ -201,27 +202,32 @@ function tiles() {
     (5 - n) + " more rollover" + (5 - n === 1 ? "" : "s") + " until a Must Be Won draw", t2);
 
   const t3 = document.getElementById("tile-alert");
-  const over = DATA.games.filter(g => g.ratio >= DATA.threshold);
-  div("label", "Alert threshold", t3);
+  // Fixed-prize games never alert: their value can't change.
+  const over = DATA.games.filter(g => !g.fixed && g.ratio >= DATA.threshold);
+  div("label", "Alert threshold (jackpot games)", t3);
   div("value", pence(DATA.threshold) + " per £1", t3);
   const note = div("note", null, t3);
   if (over.length) {
     const b = document.createElement("span"); b.className = "badge";
     b.textContent = over.map(g => g.name).join(", ") + " above";
     note.appendChild(b);
-  } else note.textContent = "No game is above it. You'll get a phone alert when one is.";
+  } else note.textContent = "Lotto, EuroMillions and Powerball are all below it. You'll get a phone alert when one isn't.";
 }
 
 function bars() {
   const box = document.getElementById("bars");
   box.replaceChildren();
-  const W = box.clientWidth, rowH = 36, labelW = W < 480 ? 96 : 120, right = 56, top = 22;
+  const W = box.clientWidth, rowH = 36, right = 56, top = 22, narrow = W < 480;
   const H = top + DATA.games.length * rowH + 4;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img",
     "aria-label": "Return per £1 staked for each game" }, box);
+  const label = g => narrow ? g.short : g.name;
+  // Size the label column to the longest name actually rendered.
+  const probe = DATA.games.map(g => text(svg, 0, -100, label(g), { class: "strong" }));
+  const labelW = Math.min(W * 0.45, Math.max(...probe.map(t => t.getComputedTextLength())) + 12);
+  probe.forEach(t => t.remove());
   const x = v => labelW + v * (W - labelW - right);
   // break-even and threshold references
-  const narrow = W < 480;
   const refs = [[DATA.threshold, narrow ? "Alert" : "Alert " + pence(DATA.threshold)], [1, narrow ? "£1" : "Break-even £1"]];
   for (const [v, lbl] of refs) {
     el("line", { x1: x(v), x2: x(v), y1: top - 4, y2: H, stroke: css("--border"), "stroke-width": 1 }, svg);
@@ -230,7 +236,7 @@ function bars() {
   const tip = div("tip", null, box);
   DATA.games.forEach((g, i) => {
     const y = top + i * rowH, bh = 16, by = y + (rowH - bh) / 2;
-    text(svg, 0, by + 12, g.name, { class: "strong" });
+    text(svg, 0, by + 12, label(g), { class: "strong" });
     const w = Math.max(2, x(g.ratio) - labelW);
     el("path", { d: `M${labelW},${by} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z`,
       fill: css("--series-1") }, svg);
@@ -331,14 +337,15 @@ function lines() {
 
 function table() {
   const t = document.getElementById("table");
-  const head = ["Game", "Price", "Jackpot", "Worth today", "EV per line", "Per £1", "Shared if won", "Notes"];
+  const head = ["Game", "Price", "Top prize", "Worth today", "EV / line",
+                "Per £1 (today)", "Per £1 (headline)", "Chance jackpot is split"];
   const tr = t.createTHead().insertRow();
   for (const h of head) { const th = document.createElement("th"); th.textContent = h; tr.appendChild(th); }
   const body = t.createTBody();
   for (const g of DATA.games) {
     const r = body.insertRow();
     for (const v of [g.name, money(g.price), money(g.jackpot), money(g.worth), money(g.ev), pence(g.ratio),
-                     g.share == null ? "–" : Math.round(g.share * 100) + "%", g.notes])
+                     pence(g.ratioHeadline), g.share == null ? "–" : Math.round(g.share * 100) + "%"])
       r.insertCell().textContent = v;
   }
 }
