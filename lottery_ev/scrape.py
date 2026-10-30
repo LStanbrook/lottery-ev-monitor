@@ -166,6 +166,9 @@ def scrape_all() -> dict[str, GameData]:
                   f"title {title.group(1).strip() if title else '?'!r}, "
                   f"'bigJackpot' x{home.count('bigJackpot')}, 'mainJackpot' x{home.count('mainJackpot')})",
                   file=sys.stderr)
+            i = home.find(f"{key}Box")
+            if i >= 0:
+                print(f"  {key} box text: {_text(home[i:i + 1200])[:300]!r}", file=sys.stderr)
         if not out[key].breakdown:
             print(f"Warning: no {key} prize breakdown found", file=sys.stderr)
     return out
