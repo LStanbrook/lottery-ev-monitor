@@ -5,11 +5,13 @@ so we use the independent results site instead. A full run makes about 8 page re
 """
 import functools
 import html
+import json
 import re
 import sys
 import time
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 BASE = "https://www.lottery.co.uk"
 USER_AGENT = "lottery-ev-monitor/0.1 (personal use)"
@@ -129,6 +131,21 @@ def _powerball() -> GameData:
     results = fetch("/powerball/results")
     data = GameData(jackpot=money_after(results, "Next Powerball Jackpot"))
     return _with_breakdown("powerball", data, results)
+
+
+def save_cache(path: Path, cache: dict[str, tuple[str, GameData]]) -> None:
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps({k: [ts, asdict(d)] for k, (ts, d) in cache.items()}, indent=1))
+
+
+def load_cache(path: Path) -> dict[str, tuple[str, GameData]]:
+    if not path.exists():
+        return {}
+    out = {}
+    for key, (ts, d) in json.loads(path.read_text()).items():
+        d["breakdown"] = {k: BreakdownRow(**row) for k, row in d["breakdown"].items()}
+        out[key] = (ts, GameData(**d))
+    return out
 
 
 def scrape_all() -> dict[str, GameData]:

@@ -27,6 +27,7 @@ def build(results: list[Result], history_path: Path, threshold: float, out_path:
         "threshold": threshold,
         "rollovers": lotto.rollovers,
         "mustBeWon": lotto.must_be_won,
+        "stale": {r.game.name: r.stale_since for r in results if r.stale_since},
         "games": [
             {
                 "key": r.game.key, "name": r.game.name, "price": r.game.price,
@@ -106,6 +107,7 @@ h2 { font-size: 15px; margin: 0 0 4px; }
 .tip .row i { width: 12px; height: 2px; background: var(--c); }
 .tip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .tip .t { color: var(--text-muted); margin-bottom: 4px; }
+.stale { padding: 12px 16px; font-size: 13px; color: var(--text-secondary); }
 .empty { color: var(--text-muted); font-size: 13px; padding: 24px 0; text-align: center; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -122,6 +124,7 @@ footer p { margin: 4px 0; }
     <h1>Lottery value monitor</h1>
     <div class="sub" id="updated"></div>
   </header>
+  <div class="card stale" id="stale" hidden></div>
 
   <section class="tiles">
     <div class="card tile" id="tile-best"></div>
@@ -186,6 +189,13 @@ function div(cls, str, parent) {
 
 function tiles() {
   document.getElementById("updated").textContent = "Updated " + fmtTime(DATA.generated);
+  const stale = Object.entries(DATA.stale || {});
+  if (stale.length) {
+    const box = document.getElementById("stale");
+    box.hidden = false;
+    box.textContent = "This check couldn't reach lottery.co.uk, so " + stale.map(([n]) => n).join(", ")
+      + " use the last good data, from " + fmtTime(stale[0][1]) + ".";
+  }
   const best = DATA.games[0];
   const t1 = document.getElementById("tile-best");
   div("label", "Best value right now", t1);
