@@ -13,7 +13,7 @@ import tomllib
 from datetime import datetime
 from pathlib import Path
 
-from lottery_ev import notify
+from lottery_ev import dashboard, notify
 from lottery_ev.ev import Assumptions, evaluate
 from lottery_ev.games import GAMES
 from lottery_ev.scrape import GameData, parse_money, scrape_all
@@ -22,6 +22,7 @@ ROOT = Path(__file__).parent
 DATA_DIR = ROOT / "data"
 STATE_FILE = DATA_DIR / "state.json"
 HISTORY_FILE = DATA_DIR / "history.csv"
+DASHBOARD_FILE = DATA_DIR / "dashboard.html"
 
 
 def load_config() -> dict:
@@ -111,6 +112,7 @@ def main() -> int:
     print_table(results)
     if not args.jackpot:
         append_history(results)
+        dashboard.build(results, HISTORY_FILE, cfg.get("alerts", {}).get("threshold", 0.6), DASHBOARD_FILE)
     if args.notify:
         send_alerts(results, cfg)
     return 0

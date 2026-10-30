@@ -44,6 +44,7 @@ class Result:
     tickets: float | None = None
     share_chance: float | None = None     # P(someone else also wins | you win)
     must_be_won: bool = False
+    rollovers: int | None = None          # Lotto only
     notes: list[str] = field(default_factory=list)
 
     @property
@@ -120,7 +121,7 @@ def evaluate(game: Game, data: GameData | None, a: Assumptions) -> Result:
 
     if game.key == "lotto":
         if a.lotto_must_be_won == "auto":
-            n = lotto_rollovers(data.recent_jackpots, data.jackpot)
+            n = res.rollovers = lotto_rollovers(data.recent_jackpots, data.jackpot)
             res.must_be_won = n >= 5
             res.notes.append(f"{n} rollover{'s' if n != 1 else ''}")
         else:
