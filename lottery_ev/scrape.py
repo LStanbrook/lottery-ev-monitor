@@ -3,6 +3,7 @@
 The official national-lottery.co.uk site renders jackpots client-side from a private API,
 so we use the independent results site instead. A full run makes about 8 page requests.
 """
+import functools
 import html
 import re
 import sys
@@ -35,6 +36,7 @@ class GameData:
     recent_jackpots: list[float] = field(default_factory=list)  # newest first (Lotto only)
 
 
+@functools.cache
 def fetch(path: str, attempts: int = 3) -> str:
     req = urllib.request.Request(BASE + path, headers={"User-Agent": USER_AGENT})
     for attempt in range(attempts):
@@ -106,7 +108,10 @@ def _with_breakdown(slug: str, data: GameData, results_page: str) -> GameData:
 
 def _lotto() -> GameData:
     results = fetch("/lotto/results")
-    data = GameData(jackpot=money_after(results, "Next Estimated Lotto Jackpot"))
+    # The results page's estimate isn't always served (e.g. to non-UK visitors such as
+    # GitHub's runners), so fall back to the homepage's Lotto box.
+    data = GameData(jackpot=money_after(results, "Next Estimated Lotto Jackpot")
+                    or money_after(fetch("/"), "Next Estimated Jackpot:"))
     # Each previous draw is listed as "Jackpot: £X", newest first.
     data.recent_jackpots = [
         v for v in (parse_money(_text(s)) for s in
@@ -134,4 +139,9 @@ def scrape_all() -> dict[str, GameData]:
             out[key] = scraper()
         except OSError as e:
             print(f"Warning: could not fetch {key} ({e})", file=sys.stderr)
+            continue
+        if out[key].jackpot is None:
+            print(f"Warning: no {key} jackpot found on lottery.co.uk", file=sys.stderr)
+        if not out[key].breakdown:
+            print(f"Warning: no {key} prize breakdown found", file=sys.stderr)
     return out
