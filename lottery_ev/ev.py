@@ -45,6 +45,7 @@ class Result:
     share_chance: float | None = None     # P(someone else also wins | you win)
     must_be_won: bool = False
     rollovers: int | None = None          # Lotto only
+    stale_since: str | None = None        # set when the site was unreachable and old data was reused
     notes: list[str] = field(default_factory=list)
 
     @property

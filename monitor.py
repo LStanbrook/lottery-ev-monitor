@@ -10,19 +10,20 @@ import json
 import os
 import sys
 import tomllib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lottery_ev import dashboard, notify
 from lottery_ev.ev import Assumptions, evaluate
 from lottery_ev.games import GAMES
-from lottery_ev.scrape import GameData, parse_money, scrape_all
+from lottery_ev.scrape import GameData, load_cache, parse_money, save_cache, scrape_all
 
 ROOT = Path(__file__).parent
 DATA_DIR = ROOT / "data"
 STATE_FILE = DATA_DIR / "state.json"
 HISTORY_FILE = DATA_DIR / "history.csv"
 DASHBOARD_FILE = DATA_DIR / "dashboard.html"
+CACHE_FILE = DATA_DIR / "last_scrape.json"
 
 
 def load_config() -> dict:
@@ -52,6 +53,21 @@ def print_table(results) -> None:
           "Split? = chance a jackpot win would be shared with another winner.")
 
 
+def with_fallback(live: dict[str, GameData]) -> tuple[dict[str, GameData], dict[str, str]]:
+    """Fills games the site didn't return with the last good scrape, so one failed run
+    doesn't blank the dashboard. Returns the data plus {game: when the fallback was scraped}."""
+    cache = load_cache(CACHE_FILE)
+    now = datetime.now(timezone.utc).isoformat(timespec="minutes")
+    stale = {}
+    for key in ("lotto", "euromillions", "powerball"):
+        if key in live and live[key].jackpot is not None:
+            cache[key] = (now, live[key])
+        elif key in cache:
+            stale[key], live[key] = cache[key]
+    save_cache(CACHE_FILE, cache)
+    return live, stale
+
+
 def append_history(results) -> None:
     DATA_DIR.mkdir(exist_ok=True)
     new = not HISTORY_FILE.exists()
@@ -61,6 +77,8 @@ def append_history(results) -> None:
             w.writerow(["timestamp", "game", "jackpot", "ev", "ratio", "tickets", "must_be_won"])
         now = datetime.now().isoformat(timespec="seconds")
         for r in results:
+            if r.stale_since:
+                continue  # only record values actually observed on this run
             w.writerow([now, r.game.key, r.jackpot or "", round(r.ev, 4), round(r.ratio, 4),
                         round(r.tickets) if r.tickets else "", r.must_be_won])
 
@@ -103,16 +121,22 @@ def main() -> int:
     assumptions = Assumptions(**cfg.get("assumptions", {}))
 
     live: dict[str, GameData] = {}
+    stale: dict[str, str] = {}
     if not args.no_scrape:
         try:
             live = scrape_all()
         except Exception as e:  # keep going with fixed-prize games and overrides
             print(f"Warning: could not fetch live jackpots ({e})", file=sys.stderr)
+        live, stale = with_fallback(live)
     for item in args.jackpot:
         key, _, amount = item.partition("=")
         live.setdefault(key, GameData()).jackpot = parse_money(amount)
 
     results = [evaluate(game, live.get(key), assumptions) for key, game in GAMES.items()]
+    for r in results:
+        if r.game.key in stale:
+            r.stale_since = stale[r.game.key]
+            r.notes.append(f"site unreachable, using data from {stale[r.game.key]}")
     print_table(results)
     if not args.jackpot:
         append_history(results)
