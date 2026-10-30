@@ -39,15 +39,17 @@ def money(x: float | None) -> str:
 
 
 def print_table(results) -> None:
-    header = f"{'Game':<14}{'Price':>7}{'Jackpot':>10}{'Worth today':>13}{'EV/line':>9}{'Per £1':>8}{'Share?':>8}  Notes"
+    header = (f"{'Game':<32}{'Price':>7}{'Jackpot':>10}{'Worth today':>13}{'EV/line':>9}"
+              f"{'Per £1':>8}{'Headline':>10}{'Split?':>8}  Notes")
     print(header)
     print("-" * len(header))
     for r in sorted(results, key=lambda r: r.ratio, reverse=True):
         share = f"{r.share_chance:.0%}" if r.share_chance is not None else "-"
-        print(f"{r.game.name:<14}{money(r.game.price):>7}{money(r.jackpot):>10}{money(r.jackpot_value):>13}"
-              f"{money(r.ev):>9}{r.ratio:>7.0%} {share:>8}  {', '.join(r.notes)}")
-    print("\nPer £1 = expected £ back per £1 staked (100% = break-even). "
-          "Share? = chance a jackpot win would be shared.")
+        print(f"{r.game.name:<32}{money(r.game.price):>7}{money(r.jackpot):>10}{money(r.jackpot_value):>13}"
+              f"{money(r.ev):>9}{r.ratio:>7.0%} {r.ratio_headline:>9.0%} {share:>7}  {', '.join(r.notes)}")
+    print("\nPer £1 = expected £ back per £1 staked, valuing the jackpot at what it's worth today "
+          "(100% = break-even).\nHeadline = the same at the advertised jackpot. "
+          "Split? = chance a jackpot win would be shared with another winner.")
 
 
 def append_history(results) -> None:
@@ -68,6 +70,8 @@ def send_alerts(results, cfg: dict) -> None:
     per_game = alerts.get("per_game", {})
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {}
     for r in results:
+        if not r.game.has_jackpot_feed:
+            continue  # fixed prizes: the value never changes, so there's nothing to alert on
         threshold = per_game.get(r.game.key, alerts.get("threshold", 0.6))
         # Key on the jackpot so we alert once per draw, not on every run.
         key = f"{r.jackpot}|{r.must_be_won}"

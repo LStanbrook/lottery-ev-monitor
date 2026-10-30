@@ -52,6 +52,15 @@ class Result:
         """£ returned per £1 staked. 1.0 = break-even."""
         return self.ev / self.game.price
 
+    @property
+    def ratio_headline(self) -> float:
+        """Same as ratio, but valuing the jackpot at its advertised figure rather than today's value.
+        Jackpot EV is proportional to the jackpot's value, so it just scales up."""
+        if not self.jackpot or not self.jackpot_value:
+            return self.ratio
+        uplift = self.jackpot_ev * (self.jackpot / self.jackpot_value - 1)
+        return (self.ev + uplift) / self.game.price
+
 
 def annuity_pv_factor(years: int, rate: float, growth: float = 0.0) -> float:
     """Present value of an annuity paid yearly from today, as a fraction of its face value."""
@@ -99,7 +108,7 @@ def evaluate(game: Game, data: GameData | None, a: Assumptions) -> Result:
             value *= annuity_pv_factor(30, a.discount_rate)
         res.jackpot = game.fixed_jackpot
         res.jackpot_value = value
-        res.jackpot_ev = value * game.jackpot_prob
+        res.jackpot_ev = value * game.jackpot_prob * game.rounds
         res.notes.append("fixed prizes")
         res.ev = res.jackpot_ev + res.other_ev
         return res
