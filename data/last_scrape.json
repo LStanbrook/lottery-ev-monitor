@@ -1,6 +1,6 @@
 {
  "lotto": [
-  "2026-11-01T14:42+00:00",
+  "2026-11-01T20:06+00:00",
   {
    "jackpot": 2800000.0,
    "breakdown": {
@@ -82,7 +82,7 @@
   }
  ],
  "euromillions": [
-  "2026-11-01T14:42+00:00",
+  "2026-11-01T20:06+00:00",
   {
    "jackpot": 82000000.0,
    "breakdown": {
@@ -232,15 +232,15 @@
   }
  ],
  "powerball": [
-  "2026-10-30T15:05+00:00",
+  "2026-11-01T20:06+00:00",
   {
-   "jackpot": 404000000.0,
+   "jackpot": 418000000.0,
    "breakdown": {
     "Match 5 plus Powerball": {
      "label": "Match 5 plus Powerball",
-     "prize": 389258208.0,
+     "prize": 411469464.0,
      "cells": {
-      "Prize": "\u00a3389,258,208.00",
+      "Prize": "\u00a3411,469,464.00",
       "UK Winners": "0",
       "U.S. Winners": "0",
       "Total Winners": "Rollover 0",
@@ -252,87 +252,87 @@
      "prize": 1000000.0,
      "cells": {
       "Prize": "\u00a31,000,000.00",
-      "UK Winners": "0",
-      "U.S. Winners": "0",
-      "Total Winners": "0",
-      "UK Prize Fund": "\u00a30.00"
+      "UK Winners": "1",
+      "U.S. Winners": "1",
+      "Total Winners": "2",
+      "UK Prize Fund": "\u00a31,000,000.00"
      }
     },
     "Match 4 plus Powerball": {
      "label": "Match 4 plus Powerball",
-     "prize": 39091.7,
+     "prize": 19526.1,
      "cells": {
-      "Prize": "\u00a339,091.70",
-      "UK Winners": "1",
-      "U.S. Winners": "13",
-      "Total Winners": "14",
-      "UK Prize Fund": "\u00a339,091.70"
+      "Prize": "\u00a319,526.10",
+      "UK Winners": "3",
+      "U.S. Winners": "22",
+      "Total Winners": "25",
+      "UK Prize Fund": "\u00a358,578.30"
      }
     },
     "Match 4": {
      "label": "Match 4",
-     "prize": 1526.4,
+     "prize": 1392.3,
      "cells": {
-      "Prize": "\u00a31,526.40",
-      "UK Winners": "14",
-      "U.S. Winners": "383",
-      "Total Winners": "397",
-      "UK Prize Fund": "\u00a321,369.60"
+      "Prize": "\u00a31,392.30",
+      "UK Winners": "23",
+      "U.S. Winners": "598",
+      "Total Winners": "621",
+      "UK Prize Fund": "\u00a332,022.90"
      }
     },
     "Match 3 plus Powerball": {
      "label": "Match 3 plus Powerball",
-     "prize": 422.3,
+     "prize": 611.8,
      "cells": {
-      "Prize": "\u00a3422.30",
-      "UK Winners": "58",
-      "U.S. Winners": "1,103",
-      "Total Winners": "1,161",
-      "UK Prize Fund": "\u00a324,493.40"
+      "Prize": "\u00a3611.80",
+      "UK Winners": "60",
+      "U.S. Winners": "1,532",
+      "Total Winners": "1,592",
+      "UK Prize Fund": "\u00a336,708.00"
      }
     },
     "Match 3": {
      "label": "Match 3",
-     "prize": 49.0,
+     "prize": 56.0,
      "cells": {
-      "Prize": "\u00a349.00",
-      "UK Winners": "1,307",
-      "U.S. Winners": "26,046",
-      "Total Winners": "27,353",
-      "UK Prize Fund": "\u00a364,043.00"
+      "Prize": "\u00a356.00",
+      "UK Winners": "1,713",
+      "U.S. Winners": "39,435",
+      "Total Winners": "41,148",
+      "UK Prize Fund": "\u00a395,928.00"
      }
     },
     "Match 2 plus Powerball": {
      "label": "Match 2 plus Powerball",
-     "prize": 24.7,
+     "prize": 34.0,
      "cells": {
-      "Prize": "\u00a324.70",
-      "UK Winners": "1,263",
-      "U.S. Winners": "23,664",
-      "Total Winners": "24,927",
-      "UK Prize Fund": "\u00a331,196.10"
+      "Prize": "\u00a334.00",
+      "UK Winners": "1,375",
+      "U.S. Winners": "31,544",
+      "Total Winners": "32,919",
+      "UK Prize Fund": "\u00a346,750.00"
      }
     },
     "Match 1 plus Powerball": {
      "label": "Match 1 plus Powerball",
-     "prize": 13.3,
+     "prize": 17.8,
      "cells": {
-      "Prize": "\u00a313.30",
-      "UK Winners": "8,897",
-      "U.S. Winners": "178,077",
-      "Total Winners": "186,974",
-      "UK Prize Fund": "\u00a3118,330.10"
+      "Prize": "\u00a317.80",
+      "UK Winners": "9,965",
+      "U.S. Winners": "233,228",
+      "Total Winners": "243,193",
+      "UK Prize Fund": "\u00a3177,377.00"
      }
     },
     "Match 0 plus Powerball": {
      "label": "Match 0 plus Powerball",
-     "prize": 11.9,
+     "prize": 14.1,
      "cells": {
-      "Prize": "\u00a311.90",
-      "UK Winners": "18,577",
-      "U.S. Winners": "405,307",
-      "Total Winners": "423,884",
-      "UK Prize Fund": "\u00a3221,066.30"
+      "Prize": "\u00a314.10",
+      "UK Winners": "23,469",
+      "U.S. Winners": "549,844",
+      "Total Winners": "573,313",
+      "UK Prize Fund": "\u00a3330,912.90"
      }
     },
     "Match 2": {
@@ -340,10 +340,10 @@
      "prize": 8.0,
      "cells": {
       "Prize": "\u00a38.00",
-      "UK Winners": "26,861",
+      "UK Winners": "37,451",
       "U.S. Winners": "0",
-      "Total Winners": "26,861",
-      "UK Prize Fund": "\u00a3214,888.00"
+      "Total Winners": "37,451",
+      "UK Prize Fund": "\u00a3299,608.00"
      }
     },
     "Totals": {
@@ -351,14 +351,14 @@
      "prize": null,
      "cells": {
       "Prize": "-",
-      "UK Winners": "56,978",
-      "U.S. Winners": "634,593",
-      "Total Winners": "691,571",
-      "UK Prize Fund": "\u00a3734,478.20"
+      "UK Winners": "74,060",
+      "U.S. Winners": "856,204",
+      "Total Winners": "930,264",
+      "UK Prize Fund": "\u00a32,077,885.10"
      }
     }
    },
-   "breakdown_url": "/powerball/results-29-10-2026",
+   "breakdown_url": "/powerball/results-01-11-2026",
    "recent_jackpots": []
   }
  ]
