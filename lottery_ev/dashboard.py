@@ -1,6 +1,7 @@
 """Builds a self-contained HTML dashboard from the latest results and data/history.csv."""
 import csv
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,7 +32,7 @@ def build(results: list[Result], history_path: Path, threshold: float, out_path:
         "games": [
             {
                 "key": r.game.key, "name": r.game.name, "price": r.game.price,
-                "short": r.game.name.replace("EuroMillions HotPicks", "EM HotPicks"),
+                "short": re.sub(r" \(Pick \d+\)", "", r.game.name.replace("EuroMillions HotPicks", "EM HotPicks")),
                 "jackpot": r.jackpot, "worth": r.jackpot_value, "ev": r.ev, "ratio": r.ratio,
                 "ratioHeadline": r.ratio_headline, "share": r.share_chance,
                 "fixed": not r.game.has_jackpot_feed,
@@ -50,103 +51,214 @@ TEMPLATE = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a1310">
 <title>Lottery Value Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  color-scheme: light;
-  --surface-0: #f4f4f2; --surface-1: #fcfcfb; --border: #e4e3df; --grid: #ecebe7;
-  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
-  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
-  --accent: #2a78d6; --good: #0f7b3e; --good-bg: #e3f4ea;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
-    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
-    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
-    --accent: #3987e5; --good: #5fd08f; --good-bg: #16301f;
-  }
-}
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
-  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
-  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
-  --accent: #3987e5; --good: #5fd08f; --good-bg: #16301f;
+  --bg: #0a1310; --felt: #17382d;
+  --surface-1: #13211d; --surface-2: #182a25; --border: #26403a; --grid: #1f332d;
+  --text-primary: #f3efe4; --text-secondary: #b9c2b8; --text-muted: #7f8d85;
+  --gold: #f2c14e; --gold-deep: #a8761f; --gold-soft: rgb(242 193 78 / 0.12);
+  /* Validated categorical order (dark surface): Lotto, EuroMillions, Powerball. */
+  --series-1: #e0559a; --series-2: #3a96e0; --series-3: #c4830c; --fixed: #5b6f66;
+  --good: #5fd08f; --good-bg: #16301f; --warn: #e8b04b; --warn-bg: #2c2412;
+  --display: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--surface-0); color: var(--text-primary);
-  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 960px; margin: 0 auto; padding: 32px 16px 48px; }
-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 24px; }
-h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
-h2 { font-size: 15px; margin: 0 0 4px; }
-.sub { color: var(--text-secondary); font-size: 13px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px; }
-.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; }
-.tile .label { color: var(--text-secondary); font-size: 13px; }
-.tile .value { font-size: 32px; font-weight: 650; letter-spacing: -0.02em; margin: 2px 0; font-variant-numeric: tabular-nums; }
-.tile .note { color: var(--text-muted); font-size: 13px; }
-.pips { display: flex; gap: 6px; margin: 10px 0 6px; }
-.pip { flex: 1; height: 8px; border-radius: 4px; background: var(--grid); }
-.pip.on { background: var(--accent); }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
-  background: var(--good-bg); color: var(--good); }
-.chart { position: relative; margin-top: 12px; }
+[hidden] { display: none !important; }
+html { background: radial-gradient(1100px 520px at 50% -8%, var(--felt) 0%, transparent 70%) no-repeat, var(--bg); }
+body { margin: 0; min-height: 100vh; color: var(--text-primary);
+  font: 15px/1.5 Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.bgpat { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+main { position: relative; max-width: 1000px; margin: 0 auto; padding: 28px 16px 40px; }
+svg.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- header ---------- */
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.logo { display: flex; }
+.logo .ball { margin-left: -8px; box-shadow: 0 4px 10px rgb(0 0 0 / 0.45); }
+.logo .ball:first-child { margin-left: 0; }
+h1 { font: 400 clamp(30px, 6vw, 44px)/0.95 var(--display); letter-spacing: 0.04em; margin: 0;
+  color: var(--gold); text-shadow: 0 2px 0 #5a3d0b, 0 0 24px rgb(242 193 78 / 0.25); }
+.tagline { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--border); background: rgb(19 33 29 / 0.8); color: var(--text-secondary); font-size: 13px; }
+.chip .icon { width: 15px; height: 15px; color: var(--gold); }
+.marquee { height: 8px; margin: 18px 0 24px; border-radius: 4px;
+  background: radial-gradient(circle, var(--gold) 0 2px, rgb(242 193 78 / 0.25) 2.6px, transparent 3.4px) 0 50% / 18px 8px repeat-x; }
+
+/* ---------- lottery balls ---------- */
+.ball { --b: var(--gold); position: relative; display: inline-grid; place-items: center; flex: none;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.85) 0 7%, transparent 26%),
+              radial-gradient(circle at 50% 50%, var(--b) 45%, color-mix(in srgb, var(--b) 55%, #000) 100%); }
+.ball span { display: grid; place-items: center; width: 58%; height: 58%; border-radius: 50%; background: #fbf8ef;
+  color: #1b1b1b; font: 800 12px/1 Manrope, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.ball.off { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); }
+.ball.off span { background: transparent; color: var(--text-muted); }
+
+/* ---------- ticket tiles ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.ticket { position: relative; padding: 18px 22px 18px; border-radius: 14px;
+  background: linear-gradient(160deg, #1b2e28, var(--surface-1) 60%);
+  box-shadow: inset 0 0 0 1px var(--border), inset 0 3px 0 var(--gold-deep);
+  -webkit-mask: radial-gradient(circle at 0 62%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
+                radial-gradient(circle at 100% 62%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle at 0 62%, transparent 10px, #000 10.5px) left / 51% 100% no-repeat,
+                radial-gradient(circle at 100% 62%, transparent 10px, #000 10.5px) right / 51% 100% no-repeat; }
+.ticket .label { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 12px;
+  font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.ticket .label .icon { color: var(--gold); }
+.ticket .value { font: 400 40px/1.05 var(--display); letter-spacing: 0.03em; margin: 8px 0 12px;
+  font-variant-numeric: tabular-nums; }
+.ticket .value small { font-size: 22px; color: var(--text-secondary); letter-spacing: 0.04em; }
+.ticket .note { color: var(--text-muted); font-size: 13px; padding-top: 12px; border-top: 2px dashed var(--border); }
+.balls { display: flex; gap: 8px; margin: 10px 0 14px; }
+.balls .ball { width: 32px; height: 32px; }
+.balls.mbw .ball:not(.off) { box-shadow: 0 0 14px rgb(242 193 78 / 0.55); }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 12px;
+  font-weight: 700; background: var(--good-bg); color: var(--good); }
+
+/* ---------- cards ---------- */
+.card { position: relative; background: rgb(19 33 29 / 0.92); border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px 22px; margin-bottom: 14px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.25); }
+.card h2 { display: flex; align-items: center; gap: 10px; margin: 0; font: 400 24px/1.1 var(--display);
+  letter-spacing: 0.05em; color: var(--text-primary); }
+.card h2 .icon { color: var(--gold); width: 20px; height: 20px; }
+.sub { color: var(--text-secondary); font-size: 13px; margin-top: 2px; }
+.stale { display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; font-size: 13px;
+  color: var(--text-primary); background: var(--warn-bg); border-color: #5a4a22; }
+.stale .icon { color: var(--warn); margin-top: 1px; }
+
+/* ---------- charts ---------- */
+.chart { position: relative; margin-top: 14px; }
 .chart svg { display: block; width: 100%; overflow: visible; }
-.chart text { fill: var(--text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart text { fill: var(--text-secondary); font: 500 12px Manrope, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .chart .muted { fill: var(--text-muted); }
-.chart .strong { fill: var(--text-primary); font-weight: 600; }
-.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-secondary); margin-top: 8px; }
-.legend span::before { content: ""; display: inline-block; width: 14px; height: 2px; margin-right: 6px; vertical-align: middle; background: var(--c); }
-.tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
-  opacity: 0; transition: opacity .1s; white-space: nowrap; z-index: 2; }
+.chart .strong { fill: var(--text-primary); font-weight: 700; }
+.chart .gold { fill: var(--gold); font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend span::before { content: ""; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.8) 0 10%, transparent 34%), var(--c); }
+.tip { position: absolute; pointer-events: none; background: #0e1a17; border: 1px solid #3a5a50;
+  border-radius: 10px; padding: 9px 11px; font-size: 12px; color: var(--text-secondary);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5); opacity: 0; transition: opacity .1s; white-space: nowrap; z-index: 2; }
 .tip .row { display: flex; align-items: center; gap: 8px; }
-.tip .row i { width: 12px; height: 2px; background: var(--c); }
+.tip .row i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .tip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.tip .t { color: var(--text-muted); margin-bottom: 4px; }
-.stale { padding: 12px 16px; font-size: 13px; color: var(--text-secondary); }
+.tip .t { color: var(--gold); font-weight: 700; margin-bottom: 4px; }
 .empty { color: var(--text-muted); font-size: 13px; padding: 24px 0; text-align: center; }
-.table-wrap { overflow-x: auto; }
+
+/* ---------- table ---------- */
+.table-wrap { overflow-x: auto; margin-top: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th, td { text-align: right; padding: 10px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; }
-th { color: var(--text-secondary); font-weight: 600; white-space: normal; vertical-align: bottom; }
-footer { color: var(--text-muted); font-size: 12px; margin-top: 16px; }
+th { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  white-space: normal; vertical-align: bottom; }
+tbody tr:hover { background: rgb(255 255 255 / 0.025); }
+tbody tr.top td { background: var(--gold-soft); }
+tbody tr.top td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+.game { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; color: var(--text-primary); }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.8) 0 10%, transparent 34%), var(--c); }
+.pill { margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--border); }
+th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; background: #13211d; }
+tbody tr.top td:first-child { background: #2e3423; }
+td.big { color: var(--text-primary); font-weight: 700; }
+
+/* ---------- footer ---------- */
+footer { color: var(--text-muted); font-size: 12px; margin-top: 22px; padding-top: 16px; border-top: 2px dashed var(--border); }
 footer p { margin: 4px 0; }
+footer .rg { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--text-secondary); }
+footer .rg b { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--text-secondary); font-size: 10px; }
+footer a { color: var(--gold); }
+@media (max-width: 520px) {
+  .card { padding: 16px; }
+  .ticket { padding: 16px 18px; }
+  .logo .ball { width: 28px; height: 28px; }
+  .logo .ball span { font-size: 10px; }
+}
 </style>
 </head>
 <body>
+<svg class="bgpat" aria-hidden="true">
+  <defs>
+    <pattern id="suits" width="180" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+      <g fill="#f2c14e" opacity="0.08" font-family="Segoe UI Symbol, DejaVu Sans, sans-serif" font-size="22">
+        <text x="12" y="34">&#9824;</text><text x="102" y="64">&#9830;</text>
+        <text x="48" y="128">&#9827;</text><text x="138" y="162">&#9829;</text>
+      </g>
+      <g fill="none" stroke="#f2c14e" opacity="0.08" stroke-width="1.5">
+        <circle cx="150" cy="22" r="9"/><circle cx="150" cy="22" r="4"/>
+        <circle cx="20" cy="160" r="9"/><circle cx="20" cy="160" r="4"/>
+        <path d="M86 112l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#suits)"/>
+</svg>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+  <symbol id="i-roll" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4c0 1.7 2.7 3 6 3s6-1.3 6-3V7"/><path d="M9 14v4c0 1.7 2.7 3 6 3s6-1.3 6-3v-4c0-1.7-2.7-3-6-3"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v8a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2z"/><path d="M14 6v12" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+</svg>
+
 <main>
   <header>
-    <h1>Lottery value monitor</h1>
-    <div class="sub" id="updated"></div>
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <i class="ball" style="--b:var(--series-1)"><span>7</span></i>
+        <i class="ball" style="--b:var(--gold)"><span>19</span></i>
+        <i class="ball" style="--b:var(--series-2)"><span>42</span></i>
+      </div>
+      <div>
+        <h1>Lottery Value Monitor</h1>
+        <div class="tagline">Expected return on every UK draw game, checked twice a day</div>
+      </div>
+    </div>
+    <div class="chip"><svg class="icon"><use href="#i-clock"/></svg><span id="updated"></span></div>
   </header>
-  <div class="card stale" id="stale" hidden></div>
+  <div class="marquee" aria-hidden="true"></div>
+
+  <div class="card stale" id="stale" hidden><svg class="icon"><use href="#i-warn"/></svg><span></span></div>
 
   <section class="tiles">
-    <div class="card tile" id="tile-best"></div>
-    <div class="card tile" id="tile-lotto"></div>
-    <div class="card tile" id="tile-alert"></div>
+    <div class="ticket" id="tile-best"></div>
+    <div class="ticket" id="tile-lotto"></div>
+    <div class="ticket" id="tile-alert"></div>
   </section>
 
   <section class="card">
-    <h2>Return per £1 staked, right now</h2>
-    <div class="sub">Expected prize money back for each £1 spent. £1 would be break-even.</div>
+    <h2><svg class="icon"><use href="#i-coins"/></svg>Return per £1 staked, right now</h2>
+    <div class="sub">Expected prize money back for each £1 spent. £1 would be break-even. Grey bars are fixed-prize games.</div>
     <div class="chart" id="bars"></div>
   </section>
 
   <section class="card">
-    <h2>Return per £1 over time</h2>
-    <div class="sub">The three games whose value moves with the jackpot. Checked twice a day.</div>
+    <h2><svg class="icon"><use href="#i-trend"/></svg>Return per £1 over time</h2>
+    <div class="sub">The three games whose value moves with the jackpot. Fixed-prize games stay flat, so they aren't drawn.</div>
     <div class="legend" id="legend"></div>
     <div class="chart" id="lines"></div>
   </section>
 
   <section class="card">
-    <h2>All games</h2>
+    <h2><svg class="icon"><use href="#i-ticket"/></svg>All games</h2>
     <div class="table-wrap"><table id="table"></table></div>
   </section>
 
@@ -154,6 +266,7 @@ footer p { margin: 4px 0; }
     <p>"Worth today" values annuity jackpots (Powerball, Set For Life) at present value. Jackpot sharing is estimated from the last draw's ticket sales.</p>
     <p>HotPicks rows show the best option (how many numbers to pick). Choosing more numbers pays bigger prizes but returns less per £1.</p>
     <p>A Lotto Must Be Won draw comes after 5 rollovers. Then the whole jackpot is paid out to players, which is when Lotto is at its best value.</p>
+    <div class="rg"><b>18+</b><span>Every game here returns less than you stake on average. Play for fun, and set a limit. Help is at <a href="https://www.begambleaware.org" rel="noopener">BeGambleAware.org</a>.</span></div>
   </footer>
 </main>
 
@@ -163,6 +276,7 @@ const SERIES = { lotto: "--series-1", euromillions: "--series-2", powerball: "--
 const NAMES = Object.fromEntries(DATA.games.map(g => [g.key, g.name]));
 const NS = "http://www.w3.org/2000/svg";
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const colorOf = k => css(SERIES[k] || "--fixed");
 const pence = r => r >= 1 ? "£" + r.toFixed(2) : Math.round(r * 100) + "p";
 const money = x => x == null ? "–" : x >= 1e6 ? "£" + (x / 1e6).toFixed(1).replace(/\.0$/, "") + "m"
   : "£" + x.toLocaleString("en-GB", { maximumFractionDigits: x < 1000 ? 2 : 0, minimumFractionDigits: x < 1000 ? 2 : 0 });
@@ -186,6 +300,27 @@ function div(cls, str, parent) {
   if (parent) parent.appendChild(d);
   return d;
 }
+function icon(id) {
+  const s = el("svg", { class: "icon", "aria-hidden": "true" });
+  el("use", { href: "#" + id }, s);
+  return s;
+}
+function ballEl(n, on, color) {
+  const b = document.createElement("i");
+  b.className = "ball" + (on ? "" : " off");
+  if (color) b.style.setProperty("--b", color);
+  const s = document.createElement("span"); s.textContent = n; b.appendChild(s);
+  return b;
+}
+// A glossy lottery-ball marker for SVG charts: one radial gradient per colour.
+function ballGrad(svg, id, color) {
+  const defs = svg.querySelector("defs") || el("defs", {}, svg);
+  const g = el("radialGradient", { id, cx: "35%", cy: "30%", r: "75%" }, defs);
+  el("stop", { offset: "0", "stop-color": "#ffffff", "stop-opacity": "0.9" }, g);
+  el("stop", { offset: "0.28", "stop-color": color }, g);
+  el("stop", { offset: "1", "stop-color": color }, g);
+  return `url(#${id})`;
+}
 
 function tiles() {
   document.getElementById("updated").textContent = "Updated " + fmtTime(DATA.generated);
@@ -193,33 +328,40 @@ function tiles() {
   if (stale.length) {
     const box = document.getElementById("stale");
     box.hidden = false;
-    box.textContent = "This check couldn't get a live jackpot from lottery.co.uk, so " + stale.map(([n]) => n).join(", ")
-      + " use the last good data, from " + fmtTime(stale[0][1]) + ".";
+    box.querySelector("span").textContent = "This check couldn't get a live jackpot from lottery.co.uk, so "
+      + stale.map(([n]) => n).join(", ") + " use the last good data, from " + fmtTime(stale[0][1]) + ".";
   }
+  const label = (parent, id, str) => { const l = div("label", null, parent); l.append(icon(id), str); };
+  const value = (parent, big, small) => {
+    const v = div("value", big, parent);
+    if (small) { const s = document.createElement("small"); s.textContent = " " + small; v.appendChild(s); }
+  };
+
   const best = DATA.games[0];
   const t1 = document.getElementById("tile-best");
-  div("label", "Best value right now", t1);
-  div("value", pence(best.ratio) + " per £1", t1);
+  label(t1, "i-trophy", "Best value right now");
+  value(t1, pence(best.ratio), "per £1");
   div("note", best.name + " · " + money(best.ev) + " back per " + money(best.price) + " line", t1);
 
   const t2 = document.getElementById("tile-lotto");
-  div("label", "Lotto rollovers", t2);
+  label(t2, "i-roll", "Lotto rollovers");
   const n = DATA.rollovers ?? 0;
-  div("value", DATA.mustBeWon ? "Must Be Won" : n + " of 5", t2);
-  const pips = div("pips", null, t2);
-  for (let i = 0; i < 5; i++) div("pip" + (i < n ? " on" : ""), null, pips);
+  if (DATA.mustBeWon) value(t2, "Must Be Won"); else value(t2, n + " of 5", "rollovers");
+  const balls = div("balls" + (DATA.mustBeWon ? " mbw" : ""), null, t2);
+  balls.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 5; i++) balls.appendChild(ballEl(i + 1, DATA.mustBeWon || i < n));
   div("note", DATA.mustBeWon ? "Next draw pays out the whole jackpot" :
     (5 - n) + " more rollover" + (5 - n === 1 ? "" : "s") + " until a Must Be Won draw", t2);
 
   const t3 = document.getElementById("tile-alert");
   // Fixed-prize games never alert: their value can't change.
   const over = DATA.games.filter(g => !g.fixed && g.ratio >= DATA.threshold);
-  div("label", "Alert threshold (jackpot games)", t3);
-  div("value", pence(DATA.threshold) + " per £1", t3);
+  label(t3, "i-bell", "Alert threshold");
+  value(t3, pence(DATA.threshold), "per £1");
   const note = div("note", null, t3);
   if (over.length) {
     const b = document.createElement("span"); b.className = "badge";
-    b.textContent = over.map(g => g.name).join(", ") + " above";
+    b.textContent = "✓ " + over.map(g => g.name).join(", ") + " above";
     note.appendChild(b);
   } else note.textContent = "Lotto, EuroMillions and Powerball are all below it. You'll get a phone alert when one isn't.";
 }
@@ -227,30 +369,34 @@ function tiles() {
 function bars() {
   const box = document.getElementById("bars");
   box.replaceChildren();
-  const W = box.clientWidth, rowH = 36, right = 56, top = 22, narrow = W < 480;
+  const W = box.clientWidth, rowH = 38, right = 56, top = 22, narrow = W < 480, dotW = 20;
   const H = top + DATA.games.length * rowH + 4;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, height: H, role: "img",
     "aria-label": "Return per £1 staked for each game" }, box);
   const label = g => narrow ? g.short : g.name;
   // Size the label column to the longest name actually rendered.
   const probe = DATA.games.map(g => text(svg, 0, -100, label(g), { class: "strong" }));
-  const labelW = Math.min(W * 0.45, Math.max(...probe.map(t => t.getComputedTextLength())) + 12);
+  const labelW = Math.min(W * 0.45, Math.max(...probe.map(t => t.getComputedTextLength())) + dotW + 14);
   probe.forEach(t => t.remove());
   const x = v => labelW + v * (W - labelW - right);
   // break-even and threshold references
-  const refs = [[DATA.threshold, narrow ? "Alert" : "Alert " + pence(DATA.threshold)], [1, narrow ? "£1" : "Break-even £1"]];
-  for (const [v, lbl] of refs) {
-    el("line", { x1: x(v), x2: x(v), y1: top - 4, y2: H, stroke: css("--border"), "stroke-width": 1 }, svg);
-    text(svg, x(v), 12, lbl, { "text-anchor": v === 1 ? "end" : "middle", class: "muted" });
+  const refs = [[DATA.threshold, narrow ? "Alert" : "Alert " + pence(DATA.threshold), "muted"],
+                [1, narrow ? "£1" : "Break-even £1", "gold"]];
+  for (const [v, lbl, cls] of refs) {
+    el("line", { x1: x(v), x2: x(v), y1: top - 4, y2: H, stroke: v === 1 ? css("--gold-deep") : css("--border"),
+      "stroke-width": 1, "stroke-dasharray": v === 1 ? "4 4" : "" }, svg);
+    text(svg, x(v), 12, lbl, { "text-anchor": v === 1 ? "end" : "middle", class: cls });
   }
   const tip = div("tip", null, box);
   DATA.games.forEach((g, i) => {
-    const y = top + i * rowH, bh = 16, by = y + (rowH - bh) / 2;
-    text(svg, 0, by + 12, label(g), { class: "strong" });
-    const w = Math.max(2, x(g.ratio) - labelW);
+    const y = top + i * rowH, bh = 14, by = y + (rowH - bh) / 2, c = colorOf(g.key);
+    el("circle", { cx: 7, cy: by + bh / 2, r: 7, fill: ballGrad(svg, "bb" + i, c) }, svg);
+    text(svg, dotW, by + 11, label(g), { class: "strong" });
+    const w = Math.max(6, x(g.ratio) - labelW);
+    el("rect", { x: labelW, y: by + bh / 2 - 1, width: x(1) - labelW, height: 2, rx: 1, fill: css("--grid") }, svg);
     el("path", { d: `M${labelW},${by} h${w - 4} a4,4 0 0 1 4,4 v${bh - 8} a4,4 0 0 1 -4,4 h${-(w - 4)} z`,
-      fill: css("--series-1") }, svg);
-    text(svg, labelW + w + 6, by + 12, pence(g.ratio), { class: "strong" });
+      fill: c }, svg);
+    text(svg, labelW + w + 8, by + 11, pence(g.ratio), { class: "strong" });
     const hit = el("rect", { x: 0, y, width: W, height: rowH, fill: "transparent", tabindex: 0 }, svg);
     const show = () => {
       tip.replaceChildren();
@@ -258,8 +404,9 @@ function bars() {
       const r = div("row", null, tip); const b = document.createElement("b");
       b.textContent = pence(g.ratio) + " per £1"; r.appendChild(b);
       div(null, money(g.ev) + " expected back per " + money(g.price) + " line", tip);
-      if (g.jackpot) div(null, "Jackpot " + money(g.jackpot) + (g.worth !== g.jackpot ? " (worth " + money(g.worth) + " today)" : ""), tip);
-      tip.style.left = Math.min(x(g.ratio) + 12, W - tip.offsetWidth) + "px";
+      if (g.jackpot) div(null, (g.fixed ? "Top prize " : "Jackpot ") + money(g.jackpot)
+        + (g.worth !== g.jackpot ? " (worth " + money(g.worth) + " today)" : ""), tip);
+      tip.style.left = Math.max(0, Math.min(x(g.ratio) + 12, W - tip.offsetWidth)) + "px";
       tip.style.top = (y + 12 - tip.offsetHeight / 2 + 16) + "px";
       tip.style.opacity = 1;
     };
@@ -286,7 +433,7 @@ function lines() {
     div("empty", "Not enough history yet. The chart fills in as the twice-daily checks run.", box);
     return;
   }
-  const W = box.clientWidth, H = 240, narrow = W < 480, m = { l: 40, r: narrow ? 44 : 120, t: 12, b: 28 };
+  const W = box.clientWidth, H = 260, narrow = W < 480, m = { l: 40, r: narrow ? 48 : 128, t: 14, b: 30 };
   const shortSpan = times.at(-1) - times[0] < 2 * 86400e3;
   const tickFmt = t => new Date(t).toLocaleString("en-GB", shortSpan
     ? { hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "short" });
@@ -300,8 +447,9 @@ function lines() {
     el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: css("--grid") }, svg);
     text(svg, m.l - 8, y(v) + 4, Math.round(v * 100) + "p", { "text-anchor": "end", class: "muted" });
   }
-  el("line", { x1: m.l, x2: W - m.r, y1: y(DATA.threshold), y2: y(DATA.threshold), stroke: css("--text-muted"), "stroke-width": 1 }, svg);
-  text(svg, m.l + 4, y(DATA.threshold) - 6, "Alert " + pence(DATA.threshold), { class: "muted" });
+  el("line", { x1: m.l, x2: W - m.r, y1: y(DATA.threshold), y2: y(DATA.threshold), stroke: css("--gold-deep"),
+    "stroke-width": 1, "stroke-dasharray": "4 4" }, svg);
+  text(svg, m.l + 4, y(DATA.threshold) - 6, "Alert " + pence(DATA.threshold), { class: "gold" });
   const ticks = Math.min(narrow ? 3 : 5, times.length);
   for (let i = 0; i < ticks; i++) {
     const t = times[0] + (times.at(-1) - times[0]) * i / (ticks - 1);
@@ -311,15 +459,16 @@ function lines() {
   // endpoint labels, nudged apart so they never collide
   const ends = keys.map(k => ({ k, v: DATA.history[k].at(-1)[1] })).sort((a, b) => y(a.v) - y(b.v));
   let lastY = -Infinity;
-  for (const e of ends) { e.ly = Math.max(y(e.v) + 4, lastY + 14); lastY = e.ly; }
+  for (const e of ends) { e.ly = Math.max(y(e.v) + 4, lastY + 15); lastY = e.ly; }
   for (const k of keys) {
     const h = DATA.history[k], c = css(SERIES[k]);
     el("path", { d: h.map((p, i) => (i ? "L" : "M") + x(new Date(p[0]).getTime()) + "," + y(p[1])).join(""),
       fill: "none", stroke: c, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
     const last = h.at(-1), e = ends.find(e => e.k === k);
-    el("circle", { cx: x(new Date(last[0]).getTime()), cy: y(last[1]), r: 4, fill: c, stroke: css("--surface-1"), "stroke-width": 2 }, svg);
+    el("circle", { cx: x(new Date(last[0]).getTime()), cy: y(last[1]), r: 7, fill: ballGrad(svg, "lb-" + k, c),
+      stroke: css("--surface-1"), "stroke-width": 2 }, svg);
     // On phones there's only room for the value; the legend and tooltip carry the name.
-    text(svg, W - m.r + 8, e.ly, (narrow ? "" : NAMES[k] + " ") + pence(last[1]), { class: "strong" });
+    text(svg, W - m.r + 12, e.ly, (narrow ? "" : NAMES[k] + " ") + pence(last[1]), { class: "strong" });
   }
   // crosshair + tooltip
   const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--text-muted"), "stroke-width": 1, opacity: 0 }, svg);
@@ -352,18 +501,25 @@ function table() {
   const tr = t.createTHead().insertRow();
   for (const h of head) { const th = document.createElement("th"); th.textContent = h; tr.appendChild(th); }
   const body = t.createTBody();
-  for (const g of DATA.games) {
+  DATA.games.forEach((g, i) => {
     const r = body.insertRow();
-    for (const v of [g.name, money(g.price), money(g.jackpot), money(g.worth), money(g.ev), pence(g.ratio),
-                     pence(g.ratioHeadline), g.share == null ? "–" : Math.round(g.share * 100) + "%"])
-      r.insertCell().textContent = v;
-  }
+    if (i === 0) r.className = "top";
+    const name = r.insertCell(), wrap = document.createElement("span");
+    wrap.className = "game";
+    const d = document.createElement("i"); d.className = "dot"; d.style.setProperty("--c", colorOf(g.key));
+    wrap.append(d, g.name);
+    if (g.fixed) { const p = document.createElement("span"); p.className = "pill"; p.textContent = "Fixed"; wrap.appendChild(p); }
+    name.appendChild(wrap);
+    const cells = [money(g.price), money(g.jackpot), money(g.worth), money(g.ev), pence(g.ratio),
+                   pence(g.ratioHeadline), g.share == null ? "–" : Math.round(g.share * 100) + "%"];
+    cells.forEach((v, j) => { const c = r.insertCell(); c.textContent = v; if (j === 4) c.className = "big"; });
+  });
 }
 
 tiles(); bars(); lines(); table();
 let raf;
 addEventListener("resize", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { bars(); lines(); }); });
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { bars(); lines(); });
+document.fonts?.ready.then(() => { bars(); lines(); });  // re-measure labels once the web font loads
 </script>
 </body>
 </html>
