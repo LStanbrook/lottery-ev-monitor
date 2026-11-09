@@ -15,6 +15,9 @@ from pathlib import Path
 
 BASE = "https://www.lottery.co.uk"
 USER_AGENT = "lottery-ev-monitor/0.1 (personal use)"
+# Sanity cap: the biggest Lotto jackpot ever was £66m, so anything above this has been
+# read from the wrong game's box (EuroMillions and Powerball jackpots run to £100m+).
+PLAUSIBLE_MAX = {"lotto": 80e6}
 _MONEY = re.compile(r"([\d][\d,]*(?:\.\d+)?)\s*(million|billion|m\b|bn\b)?", re.I)
 
 
@@ -80,6 +83,25 @@ def money_after(page: str, anchor: str, window: int = 600) -> float | None:
     return parse_money(_text(page[i + len(anchor): i + len(anchor) + window]))
 
 
+def home_box(home: str, key: str) -> str:
+    """The homepage section for one game (e.g. 'lotto'), up to the start of the next game's box.
+
+    Whichever game drew most recently gets the big box, labelled "Next Estimated Jackpot:";
+    the others are short boxes labelled e.g. "Tuesday's Est. EuroMillions Jackpot:". So the
+    generic label moves between games and must only be read inside the right box.
+    """
+    m = re.search(rf'<div class="abstract {key}Box homeResults', home)
+    if not m:
+        return ""
+    end = home.find('<div class="abstract ', m.end())
+    return home[m.start(): end if end > 0 else m.start() + 5000]
+
+
+def home_jackpot(home: str, key: str, name: str) -> float | None:
+    box = home_box(home, key)
+    return money_after(box, "Next Estimated Jackpot:") or money_after(box, f"Est. {name} Jackpot")
+
+
 def parse_breakdown(page: str) -> dict[str, BreakdownRow]:
     rows = {}
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page, flags=re.S):
@@ -113,7 +135,7 @@ def _lotto() -> GameData:
     # The results page's estimate isn't always served (e.g. to non-UK visitors such as
     # GitHub's runners), so fall back to the homepage's Lotto box.
     data = GameData(jackpot=money_after(results, "Next Estimated Lotto Jackpot")
-                    or money_after(fetch("/"), "Next Estimated Jackpot:"))
+                    or home_jackpot(fetch("/"), "lotto", "Lotto"))
     # Each previous draw is listed as "Jackpot: £X", newest first.
     data.recent_jackpots = [
         v for v in (parse_money(_text(s)) for s in
@@ -123,14 +145,14 @@ def _lotto() -> GameData:
 
 
 def _euromillions() -> GameData:
-    data = GameData(jackpot=money_after(fetch("/"), "Est. EuroMillions Jackpot"))
+    data = GameData(jackpot=home_jackpot(fetch("/"), "euromillions", "EuroMillions"))
     return _with_breakdown("euromillions", data, fetch("/euromillions/results"))
 
 
 def _powerball() -> GameData:
     results = fetch("/powerball/results")
     data = GameData(jackpot=money_after(results, "Next Powerball Jackpot")
-                    or money_after(fetch("/"), "Est. Powerball Jackpot"))
+                    or home_jackpot(fetch("/"), "powerball", "Powerball"))
     return _with_breakdown("powerball", data, results)
 
 
@@ -158,6 +180,11 @@ def scrape_all() -> dict[str, GameData]:
         except OSError as e:
             print(f"Warning: could not fetch {key} ({e})", file=sys.stderr)
             continue
+        cap = PLAUSIBLE_MAX.get(key)
+        if cap and out[key].jackpot and out[key].jackpot > cap:
+            print(f"Warning: ignoring implausible {key} jackpot £{out[key].jackpot:,.0f} "
+                  f"(over £{cap:,.0f}; probably another game's figure)", file=sys.stderr)
+            out[key].jackpot = None
         if out[key].jackpot is None:
             # Some visitors (e.g. some GitHub runner regions) get pages without the jackpot block.
             home = fetch("/")
