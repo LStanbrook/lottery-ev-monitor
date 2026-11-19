@@ -277,3 +277,10 @@ timestamp,game,jackpot,ev,ratio,tickets,must_be_won
 2026-11-18T22:49:37,set_for_life,3600000,0.7426,0.4951,,False
 2026-11-18T22:49:37,lotto_hotpicks_1,3,0.6102,0.6102,,False
 2026-11-18T22:49:37,euromillions_hotpicks_1,10,1.0,0.6667,,False
+2026-11-19T17:01:52,lotto,12000000.0,1.1921,0.5961,6455850,False
+2026-11-19T17:01:52,euromillions,31000000.0,0.8797,0.3519,14336579,False
+2026-11-19T17:01:52,powerball,59000000.0,1.2995,0.3249,7674813,False
+2026-11-19T17:01:52,thunderball,500000,0.5288,0.5288,,False
+2026-11-19T17:01:52,set_for_life,3600000,0.7426,0.4951,,False
+2026-11-19T17:01:52,lotto_hotpicks_1,3,0.6102,0.6102,,False
+2026-11-19T17:01:52,euromillions_hotpicks_1,10,1.0,0.6667,,False
