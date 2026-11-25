@@ -19,7 +19,7 @@ Settings live in `config.toml`: the alert threshold, Windows toast and phone (nt
 | EuroMillions (£2.50) | lottery.co.uk estimate | prizes from the last draw, or long-run averages | Includes UK Millionaire Maker (£1m ÷ UK tickets) |
 | Powerball (£4) | lottery.co.uk estimate | prizes from the last draw | The jackpot is a 30-year annuity rising 5% a year, valued at present value (about 48% of the advertised figure) |
 | Thunderball (£1), Set For Life (£1.50) | fixed | fixed | EV never changes, shown for comparison |
-| Lotto HotPicks (£1), EuroMillions HotPicks (£1.50) | fixed | – | Only the best pick count is shown (Pick 1 for both: 61p and 67p per £1). Fixed prizes, so no alerts |
+| Lotto HotPicks (£1), EuroMillions HotPicks (£1.50) | fixed | – | Every pick count (Pick 1 to 5) is shown, each with its own prize and odds. Pick 1 returns most per £1 (61p and 67p). Fixed prizes, so no alerts |
 
 **Jackpot sharing:** ticket sales are estimated from the last draw's winner counts (winners in a busy tier ÷ that tier's odds). Other jackpot winners are then treated as Poisson-distributed.
 
@@ -27,7 +27,7 @@ Settings live in `config.toml`: the alert threshold, Windows toast and phone (nt
 
 ## Scheduling
 
-GitHub Actions ([.github/workflows/monitor.yml](.github/workflows/monitor.yml)) runs the check at 08:00 and 16:00 UTC every day. Each run:
+GitHub Actions ([.github/workflows/monitor.yml](.github/workflows/monitor.yml)) aims for one successful check each morning, soon after 05:00 UTC. GitHub starts scheduled runs hours late and lottery.co.uk often times out from its servers, so several slots are scheduled overnight and through the morning. A gate job skips any slot that arrives before 05:00 UTC, or once that day has live Lotto data; if a check got nothing live, the next slot tries again. Each check:
 
 - sends phone alerts through [ntfy](https://ntfy.sh), using the topic stored in the `NTFY_TOPIC` repo secret
 - commits `data/history.csv`, `data/state.json`, `data/dashboard.html` and `data/last_scrape.json` (the fallback used if lottery.co.uk can't be reached) back to the repo

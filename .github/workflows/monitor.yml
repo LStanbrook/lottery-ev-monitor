@@ -2,11 +2,20 @@ name: Lottery EV check
 
 on:
   schedule:
-    # 08:00 and 16:00 UTC: picks up new jackpots before every evening draw (Lotto Wed/Sat,
-    # EuroMillions Tue/Fri) and the early-morning Powerball draws. GitHub may delay
-    # scheduled runs by up to ~an hour under load.
-    - cron: "0 8 * * *"
-    - cron: "0 16 * * *"
+    # Aim: one successful check each morning, soon after 05:00 UTC (last night's results are
+    # in by then). GitHub starts scheduled runs anything from minutes to ~12 hours late, and
+    # lottery.co.uk often times out from its servers, so there are several slots through the
+    # evening and night. The gate job skips all but the first one that's needed.
+    - cron: "23 19 * * *"
+    - cron: "23 21 * * *"
+    - cron: "23 23 * * *"
+    - cron: "23 1 * * *"
+    - cron: "23 3 * * *"
+    - cron: "11 5 * * *"
+    - cron: "41 5 * * *"
+    - cron: "23 6 * * *"
+    - cron: "23 7 * * *"
+    - cron: "23 9 * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -19,10 +28,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.gate.outputs.go }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main   # a delayed or queued run must see what earlier runs committed
+      - id: gate
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          today=$(date -u +%F)
+          if [ "$EVENT" != "schedule" ]; then
+            go=true; why="started by hand"
+          elif [ "$(date -u +%H)" -lt 5 ]; then
+            go=false; why="before 05:00 UTC"
+          elif grep -qE "^${today}T(0[5-9]|1[0-9]|2[0-3]):[^,]*,lotto," data/history.csv; then
+            go=false; why="already have live data from this morning"
+          else
+            go=true; why="no live data yet today"
+          fi
+          echo "go=$go ($why)"
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+
   check:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:

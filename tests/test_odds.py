@@ -2,8 +2,8 @@
 import unittest
 
 from lottery_ev.ev import annuity_pv_factor, lotto_rollovers
-from lottery_ev.games import (EUROMILLIONS, EUROMILLIONS_HOTPICKS, LOTTO, LOTTO_HOTPICKS, POWERBALL,
-                              SET_FOR_LIFE, THUNDERBALL, _best)
+from lottery_ev.games import (EUROMILLIONS, EUROMILLIONS_HOTPICKS, GAMES, LOTTO, LOTTO_HOTPICKS,
+                              POWERBALL, SET_FOR_LIFE, THUNDERBALL)
 
 
 def one_in(p: float) -> float:
@@ -42,9 +42,18 @@ class TestHotPicks(unittest.TestCase):
         self.assertAlmostEqual(ev(LOTTO_HOTPICKS[0]), 3 * 6 / 59 * 2)
         self.assertAlmostEqual(1 / EUROMILLIONS_HOTPICKS[4].jackpot_prob, 2_118_760)
 
-    def test_best_pick_is_one(self):
-        self.assertEqual(_best(LOTTO_HOTPICKS).key, "lotto_hotpicks_1")
-        self.assertEqual(_best(EUROMILLIONS_HOTPICKS).key, "euromillions_hotpicks_1")
+    def test_published_odds(self):
+        # Lotto HotPicks covers two rounds, so e.g. Pick 1 is 1 in 5.2 (not 59/12 = 4.9).
+        for g, published in zip(LOTTO_HOTPICKS, (5.2, 57.3, 813, 15_172, 417_200)):
+            self.assertAlmostEqual(g.top_prize_odds / published, 1, delta=0.01)
+        for g, published in zip(EUROMILLIONS_HOTPICKS, (10, 122.5, 1_960, 46_060, 2_118_760)):
+            self.assertAlmostEqual(g.top_prize_odds / published, 1, delta=0.01)
+
+    def test_every_pick_count_is_listed(self):
+        for g in LOTTO_HOTPICKS + EUROMILLIONS_HOTPICKS:
+            self.assertIn(g.key, GAMES)
+        self.assertEqual(len(LOTTO_HOTPICKS), 5)
+        self.assertEqual(len(EUROMILLIONS_HOTPICKS), 5)
 
 
 class TestHelpers(unittest.TestCase):

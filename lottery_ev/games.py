@@ -26,6 +26,11 @@ class Game:
     has_jackpot_feed: bool = True   # False = fixed top prize, nothing to monitor
     fixed_jackpot: float = 0.0      # nominal top prize for fixed-prize games
 
+    @property
+    def top_prize_odds(self) -> float:
+        """The published '1 in N': the chance of winning the top prize at least once per ticket."""
+        return 1 / (1 - (1 - self.jackpot_prob) ** self.rounds)
+
 
 def _hypergeo(pick: int, pool: int, k: int) -> float:
     """Chance of matching exactly k of `pick` drawn numbers when choosing `pick` from `pool`."""
@@ -142,10 +147,6 @@ EUROMILLIONS_HOTPICKS = _hotpicks("euromillions_hotpicks", "EuroMillions HotPick
                                   (10, 100, 1_500, 30_000, 1_000_000))
 
 
-def _best(picks: list[Game]) -> Game:
-    """The pick count with the best return. Prizes are fixed, so this never changes."""
-    return max(picks, key=lambda g: g.fixed_jackpot * g.jackpot_prob * g.rounds / g.price)
-
-
+# Every HotPicks pick count is listed: each has its own prize and odds, so its own return.
 GAMES = {g.key: g for g in (LOTTO, EUROMILLIONS, POWERBALL, THUNDERBALL, SET_FOR_LIFE,
-                            _best(LOTTO_HOTPICKS), _best(EUROMILLIONS_HOTPICKS))}
+                            *LOTTO_HOTPICKS, *EUROMILLIONS_HOTPICKS)}

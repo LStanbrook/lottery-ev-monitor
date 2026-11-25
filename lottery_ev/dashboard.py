@@ -1,7 +1,6 @@
 """Builds a self-contained HTML dashboard from the latest results and data/history.csv."""
 import csv
 import json
-import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,7 +31,8 @@ def build(results: list[Result], history_path: Path, threshold: float, out_path:
         "games": [
             {
                 "key": r.game.key, "name": r.game.name, "price": r.game.price,
-                "short": re.sub(r" \(Pick \d+\)", "", r.game.name.replace("EuroMillions HotPicks", "EM HotPicks")),
+                "short": r.game.name.replace("EuroMillions HotPicks", "EM HotPicks").replace(" (Pick ", " P").rstrip(")"),
+                "odds": r.game.top_prize_odds,
                 "jackpot": r.jackpot, "worth": r.jackpot_value, "ev": r.ev, "ratio": r.ratio,
                 "ratioHeadline": r.ratio_headline, "share": r.share_chance,
                 "fixed": not r.game.has_jackpot_feed,
@@ -229,7 +229,7 @@ footer a { color: var(--gold); }
       </div>
       <div>
         <h1>Lottery Value Monitor</h1>
-        <div class="tagline">Expected return on every UK draw game, checked twice a day</div>
+        <div class="tagline">Expected return on every UK draw game, checked every morning</div>
       </div>
     </div>
     <div class="chip"><svg class="icon"><use href="#i-clock"/></svg><span id="updated"></span></div>
@@ -264,7 +264,7 @@ footer a { color: var(--gold); }
 
   <footer>
     <p>"Worth today" values annuity jackpots (Powerball, Set For Life) at present value. Jackpot sharing is estimated from the last draw's ticket sales.</p>
-    <p>HotPicks rows show the best option (how many numbers to pick). Choosing more numbers pays bigger prizes but returns less per £1.</p>
+    <p>HotPicks pays a fixed prize if all the numbers you pick are drawn. Every option (Pick 1 to Pick 5) is listed: picking more numbers pays a bigger prize at much longer odds. Lotto HotPicks plays both Lotto rounds.</p>
     <p>A Lotto Must Be Won draw comes after 5 rollovers. Then the whole jackpot is paid out to players, which is when Lotto is at its best value.</p>
     <div class="rg"><b>18+</b><span>Every game here returns less than you stake on average. Play for fun, and set a limit. Help is at <a href="https://www.begambleaware.org" rel="noopener">BeGambleAware.org</a>.</span></div>
   </footer>
@@ -430,7 +430,7 @@ function lines() {
   const pts = keys.flatMap(k => DATA.history[k].map(p => new Date(p[0]).getTime()));
   const times = [...new Set(pts)].sort((a, b) => a - b);
   if (times.length < 2) {
-    div("empty", "Not enough history yet. The chart fills in as the twice-daily checks run.", box);
+    div("empty", "Not enough history yet. The chart fills in as the daily checks run.", box);
     return;
   }
   const W = box.clientWidth, H = 260, narrow = W < 480, m = { l: 40, r: narrow ? 48 : 128, t: 14, b: 30 };
@@ -496,7 +496,7 @@ function lines() {
 
 function table() {
   const t = document.getElementById("table");
-  const head = ["Game", "Price", "Top prize", "Worth today", "EV / line",
+  const head = ["Game", "Price", "Top prize", "Top prize odds", "Worth today", "EV / line",
                 "Per £1 (today)", "Per £1 (headline)", "Chance jackpot is split"];
   const tr = t.createTHead().insertRow();
   for (const h of head) { const th = document.createElement("th"); th.textContent = h; tr.appendChild(th); }
@@ -510,9 +510,10 @@ function table() {
     wrap.append(d, g.name);
     if (g.fixed) { const p = document.createElement("span"); p.className = "pill"; p.textContent = "Fixed"; wrap.appendChild(p); }
     name.appendChild(wrap);
-    const cells = [money(g.price), money(g.jackpot), money(g.worth), money(g.ev), pence(g.ratio),
+    const odds = "1 in " + (g.odds < 100 ? g.odds.toFixed(1) : Math.round(g.odds).toLocaleString("en-GB"));
+    const cells = [money(g.price), money(g.jackpot), odds, money(g.worth), money(g.ev), pence(g.ratio),
                    pence(g.ratioHeadline), g.share == null ? "–" : Math.round(g.share * 100) + "%"];
-    cells.forEach((v, j) => { const c = r.insertCell(); c.textContent = v; if (j === 4) c.className = "big"; });
+    cells.forEach((v, j) => { const c = r.insertCell(); c.textContent = v; if (j === 5) c.className = "big"; });
   });
 }
 
