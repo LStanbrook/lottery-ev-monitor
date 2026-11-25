@@ -1,6 +1,6 @@
 {
  "lotto": [
-  "2026-11-23T19:47+00:00",
+  "2026-11-25T00:18+00:00",
   {
    "jackpot": 2000000.0,
    "breakdown": {
@@ -73,24 +73,24 @@
    },
    "breakdown_url": "/lotto/results-21-11-2026",
    "recent_jackpots": [
+    2000000.0,
     12000000.0,
     2839890.0,
     2000000.0,
-    5181752.0,
-    4273856.0
+    5181752.0
    ]
   }
  ],
  "euromillions": [
-  "2026-11-23T19:47+00:00",
+  "2026-11-25T00:18+00:00",
   {
-   "jackpot": 39000000.0,
+   "jackpot": 49000000.0,
    "breakdown": {
     "Match 5 and 2 Stars": {
      "label": "Match 5 and 2 Stars",
-     "prize": 31727888.0,
+     "prize": 39445843.0,
      "cells": {
-      "Prize": "\u00a331,727,888.00",
+      "Prize": "\u00a339,445,843.00",
       "UK Winners": "0",
       "Total Winners": "Rollover 0",
       "UK Prize Fund": "\u00a30.00"
@@ -98,92 +98,92 @@
     },
     "Match 5 and 1 Star": {
      "label": "Match 5 and 1 Star",
-     "prize": 225959.9,
+     "prize": 359023.3,
      "cells": {
-      "Prize": "\u00a3225,959.90",
+      "Prize": "\u00a3359,023.30",
       "UK Winners": "1",
-      "Total Winners": "2",
-      "UK Prize Fund": "\u00a3225,959.90"
+      "Total Winners": "1",
+      "UK Prize Fund": "\u00a3359,023.30"
      }
     },
     "Match 5": {
      "label": "Match 5",
-     "prize": 8124.7,
+     "prize": 0.0,
      "cells": {
-      "Prize": "\u00a38,124.70",
-      "UK Winners": "2",
-      "Total Winners": "13",
-      "UK Prize Fund": "\u00a316,249.40"
+      "Prize": "\u00a30.00",
+      "UK Winners": "0",
+      "Total Winners": "0",
+      "UK Prize Fund": "\u00a30.00"
      }
     },
     "Match 4 and 2 Stars": {
      "label": "Match 4 and 2 Stars",
-     "prize": 996.9,
+     "prize": 11004.5,
      "cells": {
-      "Prize": "\u00a3996.90",
-      "UK Winners": "9",
-      "Total Winners": "33",
-      "UK Prize Fund": "\u00a38,972.10"
+      "Prize": "\u00a311,004.50",
+      "UK Winners": "2",
+      "Total Winners": "10",
+      "UK Prize Fund": "\u00a322,009.00"
      }
     },
     "Match 4 and 1 Star": {
      "label": "Match 4 and 1 Star",
-     "prize": 91.1,
+     "prize": 108.1,
      "cells": {
-      "Prize": "\u00a391.10",
-      "UK Winners": "156",
-      "Total Winners": "665",
-      "UK Prize Fund": "\u00a314,211.60"
+      "Prize": "\u00a3108.10",
+      "UK Winners": "129",
+      "Total Winners": "445",
+      "UK Prize Fund": "\u00a313,944.90"
      }
     },
     "Match 3 and 2 Stars": {
      "label": "Match 3 and 2 Stars",
-     "prize": 44.8,
+     "prize": 54.2,
      "cells": {
-      "Prize": "\u00a344.80",
-      "UK Winners": "367",
-      "Total Winners": "1,430",
-      "UK Prize Fund": "\u00a316,441.60"
+      "Prize": "\u00a354.20",
+      "UK Winners": "245",
+      "Total Winners": "938",
+      "UK Prize Fund": "\u00a313,279.00"
      }
     },
     "Match 4": {
      "label": "Match 4",
-     "prize": 28.0,
+     "prize": 37.6,
      "cells": {
-      "Prize": "\u00a328.00",
-      "UK Winners": "390",
-      "Total Winners": "1,603",
-      "UK Prize Fund": "\u00a310,920.00"
+      "Prize": "\u00a337.60",
+      "UK Winners": "300",
+      "Total Winners": "950",
+      "UK Prize Fund": "\u00a311,280.00"
      }
     },
     "Match 2 and 2 Stars": {
      "label": "Match 2 and 2 Stars",
-     "prize": 10.8,
+     "prize": 11.5,
      "cells": {
-      "Prize": "\u00a310.80",
-      "UK Winners": "5,429",
-      "Total Winners": "20,722",
-      "UK Prize Fund": "\u00a358,633.20"
+      "Prize": "\u00a311.50",
+      "UK Winners": "4,031",
+      "Total Winners": "15,494",
+      "UK Prize Fund": "\u00a346,356.50"
      }
     },
     "Match 3 and 1 Star": {
      "label": "Match 3 and 1 Star",
-     "prize": 8.5,
+     "prize": 9.0,
      "cells": {
-      "Prize": "\u00a38.50",
-      "UK Winners": "7,756",
-      "Total Winners": "29,279",
-      "UK Prize Fund": "\u00a365,926.00"
+      "Prize": "\u00a39.00",
+      "UK Winners": "5,623",
+      "Total Winners": "22,109",
+      "UK Prize Fund": "\u00a350,607.00"
      }
     },
     "Match 3": {
      "label": "Match 3",
-     "prize": 7.0,
+     "prize": 8.0,
      "cells": {
-      "Prize": "\u00a37.00",
-      "UK Winners": "17,611",
-      "Total Winners": "66,220",
-      "UK Prize Fund": "\u00a3123,277.00"
+      "Prize": "\u00a38.00",
+      "UK Winners": "12,407",
+      "Total Winners": "46,120",
+      "UK Prize Fund": "\u00a399,256.00"
      }
     },
     "Match 1 and 2 Stars": {
@@ -191,29 +191,29 @@
      "prize": 5.1,
      "cells": {
       "Prize": "\u00a35.10",
-      "UK Winners": "28,700",
-      "Total Winners": "109,013",
-      "UK Prize Fund": "\u00a3146,370.00"
+      "UK Winners": "22,653",
+      "Total Winners": "87,334",
+      "UK Prize Fund": "\u00a3115,530.30"
      }
     },
     "Match 2 and 1 Star": {
      "label": "Match 2 and 1 Star",
-     "prize": 4.1,
+     "prize": 4.0,
      "cells": {
-      "Prize": "\u00a34.10",
-      "UK Winners": "110,951",
-      "Total Winners": "426,509",
-      "UK Prize Fund": "\u00a3454,899.10"
+      "Prize": "\u00a34.00",
+      "UK Winners": "88,392",
+      "Total Winners": "350,188",
+      "UK Prize Fund": "\u00a3353,568.00"
      }
     },
     "Match 2": {
      "label": "Match 2",
-     "prize": 2.9,
+     "prize": 3.1,
      "cells": {
-      "Prize": "\u00a32.90",
-      "UK Winners": "259,736",
-      "Total Winners": "967,097",
-      "UK Prize Fund": "\u00a3753,234.40"
+      "Prize": "\u00a33.10",
+      "UK Winners": "191,502",
+      "Total Winners": "716,665",
+      "UK Prize Fund": "\u00a3593,656.20"
      }
     },
     "Totals": {
@@ -221,13 +221,13 @@
      "prize": null,
      "cells": {
       "Prize": "-",
-      "UK Winners": "431,108",
-      "Total Winners": "1,622,586",
-      "UK Prize Fund": "\u00a31,895,094.30"
+      "UK Winners": "325,285",
+      "Total Winners": "1,240,254",
+      "UK Prize Fund": "\u00a31,678,510.20"
      }
     }
    },
-   "breakdown_url": "/euromillions/results-20-11-2026",
+   "breakdown_url": "/euromillions/results-24-11-2026",
    "recent_jackpots": []
   }
  ],
