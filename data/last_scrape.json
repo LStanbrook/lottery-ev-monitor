@@ -1,17 +1,17 @@
 {
  "lotto": [
-  "2026-11-25T10:45+00:00",
+  "2026-11-26T05:10+00:00",
   {
-   "jackpot": 2000000.0,
+   "jackpot": 3400000.0,
    "breakdown": {
     "Match 6": {
      "label": "Match 6",
-     "prize": 12000000.0,
+     "prize": 2000000.0,
      "cells": {
-      "Prize": "\u00a312,000,000",
+      "Prize": "\u00a32,000,000",
       "Round 1 Winners": "0",
       "Round 2 Winners": "0",
-      "Total Winners": "Rolldown 0",
+      "Total Winners": "Rollover 0",
       "Prize Fund Amount": "\u00a30"
      }
     },
@@ -20,10 +20,10 @@
      "prize": 1000000.0,
      "cells": {
       "Prize": "\u00a31,000,000",
-      "Round 1 Winners": "3",
-      "Round 2 Winners": "0",
-      "Total Winners": "3",
-      "Prize Fund Amount": "\u00a33,000,000"
+      "Round 1 Winners": "1",
+      "Round 2 Winners": "1",
+      "Total Winners": "2",
+      "Prize Fund Amount": "\u00a32,000,000"
      }
     },
     "Match 5": {
@@ -31,10 +31,10 @@
      "prize": 1000.0,
      "cells": {
       "Prize": "\u00a31,000",
-      "Round 1 Winners": "57",
-      "Round 2 Winners": "40",
-      "Total Winners": "97",
-      "Prize Fund Amount": "\u00a397,000"
+      "Round 1 Winners": "22",
+      "Round 2 Winners": "34",
+      "Total Winners": "56",
+      "Prize Fund Amount": "\u00a356,000"
      }
     },
     "Match 4": {
@@ -42,36 +42,36 @@
      "prize": 50.0,
      "cells": {
       "Prize": "\u00a350",
-      "Round 1 Winners": "4,563",
-      "Round 2 Winners": "3,152",
-      "Total Winners": "7,715",
-      "Prize Fund Amount": "\u00a3385,750"
+      "Round 1 Winners": "1,942",
+      "Round 2 Winners": "2,744",
+      "Total Winners": "4,686",
+      "Prize Fund Amount": "\u00a3234,300"
      }
     },
     "Match 3": {
      "label": "Match 3",
      "prize": 10.0,
      "cells": {
-      "Prize": "\u00a310 Rolldown Prize: \u00a331",
-      "Round 1 Winners": "113,529",
-      "Round 2 Winners": "80,420",
-      "Total Winners": "193,949",
-      "Prize Fund Amount": "\u00a36,012,419"
+      "Prize": "\u00a310",
+      "Round 1 Winners": "49,394",
+      "Round 2 Winners": "61,174",
+      "Total Winners": "110,568",
+      "Prize Fund Amount": "\u00a31,105,680"
      }
     },
     "Match 2": {
      "label": "Match 2",
      "prize": 1.0,
      "cells": {
-      "Prize": "\u00a31 Rolldown Prize: \u00a35",
-      "Round 1 Winners": "1,101,809",
-      "Round 2 Winners": "842,477",
-      "Total Winners": "1,944,286",
-      "Prize Fund Amount": "\u00a39,721,430"
+      "Prize": "\u00a31",
+      "Round 1 Winners": "483,170",
+      "Round 2 Winners": "535,819",
+      "Total Winners": "1,018,989",
+      "Prize Fund Amount": "\u00a31,018,989"
      }
     }
    },
-   "breakdown_url": "/lotto/results-21-11-2026",
+   "breakdown_url": "/lotto/results-25-11-2026",
    "recent_jackpots": [
     2000000.0,
     12000000.0,
@@ -82,7 +82,7 @@
   }
  ],
  "euromillions": [
-  "2026-11-25T10:45+00:00",
+  "2026-11-26T05:10+00:00",
   {
    "jackpot": 49000000.0,
    "breakdown": {
